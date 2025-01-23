@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<head>
+  <title>Mental Card Game Visualization</title>
+  <meta content="text/html;charset=utf-8" http-equiv="Content-Type"/>
+  <link rel="icon" type="image/x-icon" href="/rustacean-orig-noshadow.svg">
+</head>
+<body>
+<script defer type="module">
+  import init, { greet } from './pkg/mcg_visual.js';
+  await init()
+  const button = document.querySelector("button");
+  button.addEventListener("click", (event) => {
+    greet();
+  })
+</script>
+<button>Clicke me</button>
+</body>
