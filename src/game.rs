@@ -11,7 +11,16 @@ impl eframe::App for App {
     fn update(&mut self, ctx: &Context, frame: &mut Frame) {
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            egui::Area::new(egui::Id::new("myArea"))
+            let layout = egui::Layout::from_main_dir_and_cross_align(Direction::TopDown, Align::Center);
+            ui.with_layout(layout, |ui| {
+                let start: egui::Button = egui::Button::new("Start Game");
+                ui.add(start);
+                ui.text_edit_singleline(&mut self.text);
+                if ui.button("Log to console").clicked() {
+                    log(self.text.as_str());
+                }
+                egui::Area::new(egui::Id::new("myArea"))
+            });
         });
     }
 }
