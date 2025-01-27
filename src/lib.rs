@@ -24,7 +24,7 @@ pub fn start(canvas: web_sys::HtmlCanvasElement) -> Result<(), JsValue> {
             .start(
                 canvas,
                 web_options,
-                Box::new(|cc| Ok(Box::new(game::App::new()))),
+                Box::new(|cc| Ok(Box::new(game::App::new(cc)))),
             )
             .await
             .expect("Failed to start eframe");

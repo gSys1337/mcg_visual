@@ -21,10 +21,11 @@ console_error_panic_hook = { version = "0.1.7", optional = true }
 web-sys = { version = "0.3.77", features = ["HtmlCanvasElement"] }
 egui = "0.30.0"
 eframe = "0.30.0"
-egui_extras = { version = "0.30.0", features = ["all_loaders", "image"] }
+egui_extras = { version = "0.30.0", features = ["all_loaders", "image", "svg"] }
 wasm-bindgen-futures = "0.4.50"
 rand = { version = "0.8.5", features = ["small_rng"] }
 getrandom = { version = "0.2.15", features = ["js"] }
+image = { version = "0.25", features = ["jpeg", "png"] }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.34"
