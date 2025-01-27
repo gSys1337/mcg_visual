@@ -3,6 +3,7 @@ mod game;
 
 #[cfg(target_arch="wasm32")]
 use wasm_bindgen::prelude::*;
+#[cfg(target_arch="wasm32")]
 use eframe::WebRunner;
 
 #[cfg(target_arch="wasm32")]

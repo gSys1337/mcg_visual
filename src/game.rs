@@ -1,6 +1,7 @@
 use eframe::emath::Align;
 use eframe::Frame;
-use egui::{Context, Direction, Ui};
+use egui::{Context, Direction};
+#[cfg(target_arch="wasm32")]
 use crate::log;
 
 pub struct App {
@@ -11,6 +12,7 @@ pub struct App {
 enum Anchor {
     Menu,
     Game,
+    Settings,
 }
 
 impl eframe::App for App {
@@ -18,8 +20,38 @@ impl eframe::App for App {
         egui::CentralPanel::default().show(ctx, |ui| {
             let layout = egui::Layout::from_main_dir_and_cross_align(Direction::TopDown, Align::Center);
             ui.with_layout(layout, |ui| {
-                let start: egui::Button = egui::Button::new("Start Game");
-                ui.add(start);
+                match self.current_state {
+                    Anchor::Menu => {
+                        let start = egui::Button::new("Start Game");
+                        if ui.add(start).clicked() {
+                            #[cfg(target_arch="wasm32")]
+                            log("game started");
+                            self.current_state = Anchor::Game;
+                        };
+                        let settings = egui::Button::new("Settings");
+                        if ui.add(settings).clicked() {
+                            #[cfg(target_arch="wasm32")]
+                            log("configuring textures");
+                            self.current_state = Anchor::Settings;
+                        }
+                    }
+                    Anchor::Game => {
+                        let back = egui::Button::new("Back");
+                        if ui.add(back).clicked() {
+                            #[cfg(target_arch="wasm32")]
+                            log("back to main menu");
+                            self.current_state = Anchor::Menu;
+                        }
+                    }
+                    Anchor::Settings => {
+                        let back = egui::Button::new("Back");
+                        if ui.add(back).clicked() {
+                            #[cfg(target_arch="wasm32")]
+                            log("back to main menu");
+                            self.current_state = Anchor::Menu;
+                        }
+                    }
+                }
             });
         });
     }
@@ -29,27 +61,8 @@ impl App {
     pub fn new(cc: &eframe::CreationContext) -> Self {
         egui_extras::install_image_loaders(&cc.egui_ctx);
         crate::utils::set_panic_hook();
+        #[cfg(target_arch="wasm32")]
         log("New App created.");
         Self { cards_texture: None, current_state: Anchor::Menu }
-    }
-}
-
-trait View {
-    fn draw(&mut self, ui: &mut Ui);
-}
-
-struct Menu {}
-
-impl Menu {
-    fn new() -> Self {
-        Self {}
-    }
-}
-
-impl View for Menu {
-    fn draw(&mut self, ui: &mut Ui) {
-        if ui.button("Start Game").clicked() {
-
-        }
     }
 }
