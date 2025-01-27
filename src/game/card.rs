@@ -1,9 +1,15 @@
 use egui;
 
 #[derive(Clone)]
-struct ConventionalCard {
+pub struct ConventionalCard {
     suit: Suit,
     rank: Rank,
+}
+
+impl Default for ConventionalCard {
+    fn default() -> Self {
+        Self { suit: Default::default(), rank: Default::default() }
+    }
 }
 
 #[derive(Clone, PartialEq, Debug, Default)]
@@ -64,8 +70,15 @@ impl Rank {
     }
 }
 
-impl egui::Widget for &mut ConventionalCard {
-    fn ui(self, ui: &mut egui::Ui) -> egui::Response {
-        todo!()
+impl<'a> Into<egui::ImageSource<'a>> for &ConventionalCard {
+    fn into(self) -> egui::ImageSource<'a> {
+        format!("file://media/img_cards/{}_{}.png", self.rank.as_str(), self.suit.as_str()).into()
+    }
+}
+
+impl<'a> Into<egui::ImageSource<'a>> for ConventionalCard {
+    fn into(self) -> egui::ImageSource<'a> {
+        //format!("file:////wsl.localhost/Ubuntu/home/janc/mcg-visual/media/img_cards/{}_{}.png", self.rank.as_str(), self.suit.as_str()).into()
+        format!("file:////wsl.localhost/Ubuntu/home/janc/mcg-visual/media/img_cards/{}_{}.png", self.rank.as_str(), self.suit.as_str()).into()
     }
 }
