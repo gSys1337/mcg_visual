@@ -4,14 +4,12 @@ mod card;
 use crate::log;
 use eframe::emath::Align;
 use eframe::Frame;
-use egui::load::{BytesLoadResult, BytesLoader, TexturePoll};
-use egui::{Context, Direction, TextBuffer};
+use egui::{Context, Direction};
 
 pub struct App {
-    cards_path: Option<String>,
-    // file_dialog: egui_file_dialog::FileDialog,
+    card_sources: Vec<Vec<egui::ImageSource<'static>>>,
     current_state: Anchor,
-    // byte_loader: Arc<egui::load::DefaultBytesLoader>,
+    card: card::ConventionalCard,
 }
 
 enum Anchor {
@@ -47,34 +45,8 @@ impl eframe::App for App {
                         log("back to main menu");
                         self.current_state = Anchor::Menu;
                     }
-                    let y = egui::load::DefaultBytesLoader::default()
-                        .load(ctx, "file://../media/img_cards/1_heart.png");
-                    #[cfg(target_arch = "wasm32")]
-                    match y {
-                        Ok(y1) => {
-                            //log(format!("Y: {:?}", y1).as_str());
-                        }
-                        Err(y2) => {
-                            log(format!("Y: {:?}", y2).as_str());
-                        }
-                    }
-                    let x = ctx.try_load_texture(
-                        "file://../media/img_cards/1_heart.png",
-                        Default::default(),
-                        Default::default(),
-                    );
-                    match x {
-                        Ok(poll) => match poll {
-                            TexturePoll::Pending { .. } => {}
-                            TexturePoll::Ready { texture } => {
-                                ui.add(egui::Image::from_texture(texture));
-                            }
-                        },
-                        Err(e) => {
-                            #[cfg(target_arch = "wasm32")]
-                            log(format!("Error: {:?}", e).as_str());
-                        }
-                    }
+                    let (idx_suit, idx_rank) = self.card.get_source_index();
+                    ui.add(egui::Image::new(self.card_sources[idx_suit][idx_rank].clone()));
                 }
                 Anchor::Settings => {
                     let back = egui::Button::new("Back");
@@ -83,6 +55,17 @@ impl eframe::App for App {
                         log("back to main menu");
                         self.current_state = Anchor::Menu;
                     }
+                    egui::ComboBox::from_label("Suit")
+                        .selected_text(format!("{:?}", self.card.suit))
+                        .show_ui(ui, |ui| {
+                            for suit in card::Suit::all_vec().iter() {
+                                ui.selectable_value(
+                                    &mut self.card.suit,
+                                    *suit,
+                                    format!("{:?}", suit),
+                                );
+                            }
+                        });
                 }
             });
         });
@@ -92,16 +75,13 @@ impl eframe::App for App {
 impl App {
     pub fn new(cc: &eframe::CreationContext) -> Self {
         egui_extras::install_image_loaders(&cc.egui_ctx);
-        // let byte_loader = Arc::new(egui::load::DefaultBytesLoader::default());
-        // cc.egui_ctx.add_bytes_loader(byte_loader.clone());
         crate::utils::set_panic_hook();
         #[cfg(target_arch = "wasm32")]
         log("New App created.");
         Self {
-            cards_path: None,
             current_state: Anchor::Menu,
-            // file_dialog: egui_file_dialog::FileDialog::new(),
-            // byte_loader,
+            card_sources: card::ConventionalCard::load_image_sources(),
+            card: Default::default(),
         }
     }
 }
