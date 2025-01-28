@@ -46,7 +46,26 @@ impl eframe::App for App {
                         self.current_state = Anchor::Menu;
                     }
                     let (idx_suit, idx_rank) = self.card.get_source_index();
-                    ui.add(egui::Image::new(self.card_sources[idx_suit][idx_rank].clone()));
+                    let card_img = egui::Image::new(self.card_sources[idx_suit][idx_rank].clone())
+                        .sense(egui::Sense::click_and_drag());
+                    if self.card.pos.is_none() {
+                        let next_pos = ui.next_widget_position();
+                        let size = egui::Vec2::new(100.0, 144.0);
+                        let pos = egui::Rect::from_min_size(next_pos, size);
+                        self.card.pos = Some(pos);
+                    }
+                    let card_id = egui::Id::from("Card");
+                    let r = ui.dnd_drag_source(card_id, (), |ui| {
+                        card_img.paint_at(&ui, self.card.pos.unwrap());
+                    }).response;
+                    if r.is_pointer_button_down_on() {
+                        let pos = self.card.pos.unwrap_or(r.rect);
+                        let drag = r.drag_delta();
+                        let new = pos.translate(drag);
+                        #[cfg(target_arch = "wasm32")]
+                        log(format!("new: {:?}", new).as_str());
+                        self.card.pos = Some(new);
+                    }
                 }
                 Anchor::Settings => {
                     let back = egui::Button::new("Back");

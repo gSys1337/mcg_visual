@@ -6,6 +6,7 @@ use egui;
 pub struct ConventionalCard {
     pub suit: Suit,
     pub rank: Rank,
+    pub pos: Option<egui::Rect>,
 }
 
 #[derive(Clone, PartialEq, Debug, Default, Copy)]
@@ -107,6 +108,7 @@ impl ConventionalCard {
                 cards.push(ConventionalCard {
                     rank: *rank,
                     suit: *suit,
+                    pos: None,
                 })
             }
         }
