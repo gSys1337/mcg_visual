@@ -6,7 +6,7 @@ use egui;
 pub struct ConventionalCard {
     pub suit: Suit,
     pub rank: Rank,
-    pub pos: Option<egui::Rect>,
+    pub pos: Option<egui::Pos2>,
 }
 
 #[derive(Clone, PartialEq, Debug, Default, Copy)]
