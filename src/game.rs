@@ -1,16 +1,22 @@
 mod card;
 
+use crate::game::card::{Rank, Suit};
 #[cfg(target_arch = "wasm32")]
 use crate::log;
 use eframe::emath::Align;
 use eframe::Frame;
 use egui::{Context, Direction};
+use rand::Rng;
 use std::ops::Add;
 
 pub struct App {
     card_sources: Vec<Vec<egui::ImageSource<'static>>>,
     current_state: Anchor,
-    card: card::ConventionalCard,
+    cards: Vec<card::ConventionalCard>,
+    next_suit: Suit,
+    next_rank: Rank,
+    screen_width: f32,
+    screen_height: f32,
 }
 
 enum Anchor {
@@ -46,44 +52,70 @@ impl eframe::App for App {
                         log("back to main menu");
                         self.current_state = Anchor::Menu;
                     }
-                    egui::Area::new(egui::Id::from("single_card"))
-                        .sense(egui::Sense::click_and_drag())
-                        .current_pos(self.card.pos.unwrap_or(egui::Pos2::new(100.0, 100.0)))
-                        .show(&ctx, |ui| {
-                            let (idx_suit, idx_rank) = self.card.get_source_index();
-                            let card_img =
-                                egui::Image::new(self.card_sources[idx_suit][idx_rank].clone())
-                                    .sense(egui::Sense::click_and_drag())
-                                    .fit_to_original_size(1.0);
-                            let resp = ui.add(card_img);
-                            if resp.is_pointer_button_down_on() {
-                                let new = self
-                                    .card
-                                    .pos
-                                    .unwrap_or(egui::Pos2::new(100.0, 100.0))
-                                    .add(resp.drag_delta());
-                                self.card.pos = Some(new);
-                            }
-                        });
+                    let sources = &self.card_sources;
+                    for (idx, card) in self.cards.iter_mut().enumerate() {
+                        egui::Area::new(egui::Id::new(idx))
+                            .sense(egui::Sense::click_and_drag())
+                            .current_pos(card.pos)
+                            .show(&ctx, |ui| {
+                                let (idx_suit, idx_rank) = card.get_source_index();
+                                let card_img =
+                                    egui::Image::new(sources[idx_suit][idx_rank].clone())
+                                        .sense(egui::Sense::click_and_drag())
+                                        .fit_to_original_size(1.0);
+                                let resp = ui.add(card_img);
+                                if resp.is_pointer_button_down_on() {
+                                    let new = card.pos.add(resp.drag_delta());
+                                    card.pos = new;
+                                    //#[cfg(target_arch = "wasm32")]
+                                    //log(format!("card.pos: {:?}", new).as_str());
+                                }
+                            });
+                    }
                 }
                 Anchor::Settings => {
                     let back = egui::Button::new("Back");
+                    self.screen_width = ctx.available_rect().width();
+                    self.screen_height = ctx.available_rect().height();
                     if ui.add(back).clicked() {
                         #[cfg(target_arch = "wasm32")]
                         log("back to main menu");
                         self.current_state = Anchor::Menu;
                     }
                     egui::ComboBox::from_label("Suit")
-                        .selected_text(format!("{:?}", self.card.suit))
+                        .selected_text(format!("{:?}", self.next_suit))
                         .show_ui(ui, |ui| {
-                            for suit in card::Suit::all_vec().iter() {
+                            for suit in Suit::all_vec().iter() {
                                 ui.selectable_value(
-                                    &mut self.card.suit,
+                                    &mut self.next_suit,
                                     *suit,
                                     format!("{:?}", suit),
                                 );
                             }
                         });
+                    egui::ComboBox::from_label("Rank")
+                        .selected_text(format!("{:?}", self.next_rank))
+                        .show_ui(ui, |ui| {
+                            for rank in Rank::all_vec().iter() {
+                                ui.selectable_value(
+                                    &mut self.next_rank,
+                                    *rank,
+                                    format!("{:?}", rank),
+                                );
+                            }
+                        });
+                    if ui.button("Add").clicked() {
+                        let x = rand::thread_rng().gen_range(0..self.screen_width as i32) as f32;
+                        let y = rand::thread_rng().gen_range(0..self.screen_height as i32) as f32;
+                        let card = card::ConventionalCard {
+                            suit: self.next_suit.clone(),
+                            rank: self.next_rank.clone(),
+                            pos: egui::Pos2::from((x, y)),
+                        };
+                        self.cards.push(card);
+                        #[cfg(target_arch = "wasm32")]
+                        log(format!("added card @ ({}|{})", x, y).as_str());
+                    }
                 }
             });
         });
@@ -99,7 +131,11 @@ impl App {
         Self {
             current_state: Anchor::Menu,
             card_sources: card::ConventionalCard::load_image_sources(),
-            card: Default::default(),
+            cards: vec![],
+            next_suit: Default::default(),
+            next_rank: Default::default(),
+            screen_width: 0.0,
+            screen_height: 0.0,
         }
     }
 }

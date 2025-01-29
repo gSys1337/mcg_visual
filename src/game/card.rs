@@ -2,11 +2,11 @@
 use crate::log;
 use egui;
 
-#[derive(Clone, Default, Copy)]
+#[derive(Clone, Copy)]
 pub struct ConventionalCard {
     pub suit: Suit,
     pub rank: Rank,
-    pub pos: Option<egui::Pos2>,
+    pub pos: egui::Pos2,
 }
 
 #[derive(Clone, PartialEq, Debug, Default, Copy)]
@@ -78,7 +78,7 @@ impl Rank {
             Rank::King => "13",
         }
     }
-    
+
     pub fn all_vec() -> Vec<Rank> {
         vec![
             Rank::Ace,
@@ -108,12 +108,13 @@ impl ConventionalCard {
                 cards.push(ConventionalCard {
                     rank: *rank,
                     suit: *suit,
-                    pos: None,
+                    pos: egui::pos2(100.0, 100.0),
                 })
             }
         }
         cards
     }
+
     pub fn load_image_sources() -> Vec<Vec<egui::ImageSource<'static>>> {
         let mut sources = Vec::new();
         let mut hearts = Vec::new();
@@ -283,7 +284,7 @@ impl ConventionalCard {
         sources.push(spades);
         sources
     }
-    
+
     pub fn get_source_index(&self) -> (usize, usize) {
         let first = match self.suit {
             Suit::Heart => 0,
@@ -291,7 +292,12 @@ impl ConventionalCard {
             Suit::Club => 2,
             Suit::Spade => 3,
         };
-        let second = self.rank.as_path_str().parse::<usize>().expect("Every Rank member has a str which is correct") - 1;
+        let second = self
+            .rank
+            .as_path_str()
+            .parse::<usize>()
+            .expect("Every Rank member has a str which is correct")
+            - 1;
         (first, second)
     }
 }
