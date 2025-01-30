@@ -7,6 +7,7 @@ use eframe::emath::Align;
 use eframe::Frame;
 use egui::{Context, Direction};
 use rand::Rng;
+use std::borrow::BorrowMut;
 use std::ops::Add;
 
 pub struct App {
@@ -15,6 +16,8 @@ pub struct App {
     cards: Vec<card::ConventionalCard>,
     next_suit: Suit,
     next_rank: Rank,
+    next_suit_idx: usize,
+    next_rank_idx: usize,
     screen_width: f32,
     screen_height: f32,
 }
@@ -25,9 +28,29 @@ enum Anchor {
     Settings,
 }
 
+use egui::FontFamily::Proportional;
+use egui::FontId;
+use egui::TextStyle::*;
+use std::collections::BTreeMap;
+
 impl eframe::App for App {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
+            let size = 30.0;
+            let text_styles: BTreeMap<_, _> = [
+                (Heading, FontId::new(size, Proportional)),
+                (Name("Heading2".into()), FontId::new(size, Proportional)),
+                (Name("Context".into()), FontId::new(size, Proportional)),
+                (Body, FontId::new(size, Proportional)),
+                (Monospace, FontId::new(size, Proportional)),
+                (Button, FontId::new(size, Proportional)),
+                (Small, FontId::new(size, Proportional)),
+            ]
+            .into();
+
+            // Mutate global styles with new text styles
+            ctx.all_styles_mut(move |style| style.text_styles = text_styles.clone());
+            
             let layout =
                 egui::Layout::from_main_dir_and_cross_align(Direction::TopDown, Align::Center);
             ui.with_layout(layout, |ui| match self.current_state {
@@ -82,28 +105,46 @@ impl eframe::App for App {
                         log("back to main menu");
                         self.current_state = Anchor::Menu;
                     }
-                    egui::ComboBox::from_label("Suit")
-                        .selected_text(format!("{:?}", self.next_suit))
-                        .show_ui(ui, |ui| {
-                            for suit in Suit::all_vec().iter() {
-                                ui.selectable_value(
-                                    &mut self.next_suit,
-                                    *suit,
-                                    format!("{:?}", suit),
-                                );
-                            }
+                    let ir = egui::Area::new(egui::Id::new("suit"))
+                        .sense(egui::Sense::click())
+                        .current_pos(ui.next_widget_position())
+                        .show(ctx, |ui| {
+                            egui::ComboBox::from_label("Suit")
+                                .selected_text(format!("{:?}", self.next_suit)) //.wrap_mode(egui::TextWrapMode::Truncate)
+                                /*.show_index(
+                                    ui,
+                                    self.next_suit_idx.borrow_mut(),
+                                    card::Suit::all_vec().len(),
+                                    |i| format!("{:?}", card::Suit::all_vec()[i]),
+                                );*/
+                                .show_ui(ui, |ui| {
+                                    for suit in Suit::all_vec().iter() {
+                                        ui.selectable_value(
+                                            &mut self.next_suit,
+                                            *suit,
+                                            format!("{:?}", suit),
+                                        );
+                                    }
+                                });
                         });
-                    egui::ComboBox::from_label("Rank")
-                        .selected_text(format!("{:?}", self.next_rank))
-                        .show_ui(ui, |ui| {
-                            for rank in Rank::all_vec().iter() {
-                                ui.selectable_value(
-                                    &mut self.next_rank,
-                                    *rank,
-                                    format!("{:?}", rank),
-                                );
-                            }
+                    ui.advance_cursor_after_rect(ir.response.rect);
+                    let ir = egui::Area::new(egui::Id::new("rank"))
+                        .sense(egui::Sense::click())
+                        .current_pos(ui.next_widget_position())
+                        .show(ctx, |ui| {
+                            egui::ComboBox::from_label("Rank")
+                                .selected_text(format!("{:?}", self.next_rank))
+                                .show_ui(ui, |ui| {
+                                    for rank in Rank::all_vec().iter() {
+                                        ui.selectable_value(
+                                            &mut self.next_rank,
+                                            *rank,
+                                            format!("{:?}", rank),
+                                        );
+                                    }
+                                });
                         });
+                    ui.advance_cursor_after_rect(ir.response.rect);
                     if ui.button("Add").clicked() {
                         let x = rand::thread_rng().gen_range(0..self.screen_width as i32) as f32;
                         let y = rand::thread_rng().gen_range(0..self.screen_height as i32) as f32;
@@ -136,6 +177,8 @@ impl App {
             next_rank: Default::default(),
             screen_width: 0.0,
             screen_height: 0.0,
+            next_suit_idx: 0,
+            next_rank_idx: 0,
         }
     }
 }
