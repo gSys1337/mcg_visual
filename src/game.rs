@@ -1,21 +1,20 @@
-mod card;
+pub mod card;
 
-use crate::game::card::{Rank, Suit};
+use crate::game::card::example;
 #[cfg(target_arch = "wasm32")]
 use crate::log;
 use eframe::emath::Align;
 use eframe::Frame;
 use egui::{Context, Direction};
 use rand::Rng;
-use std::borrow::BorrowMut;
 use std::ops::Add;
 
 pub struct App {
     card_sources: Vec<Vec<egui::ImageSource<'static>>>,
     current_state: Anchor,
-    cards: Vec<card::ConventionalCard>,
-    next_suit: Suit,
-    next_rank: Rank,
+    cards: Vec<example::ConventionalCard>,
+    next_suit: example::Suit,
+    next_rank: example::Rank,
     screen_width: f32,
     screen_height: f32,
 }
@@ -28,7 +27,7 @@ impl App {
         log("New App created.");
         Self {
             current_state: Anchor::Menu,
-            card_sources: card::ConventionalCard::load_image_sources(),
+            card_sources: example::ConventionalCard::load_image_sources(),
             cards: vec![],
             next_suit: Default::default(),
             next_rank: Default::default(),
@@ -128,7 +127,7 @@ impl eframe::App for App {
                             egui::ComboBox::from_label("Suit")
                                 .selected_text(format!("{:?}", self.next_suit))
                                 .show_ui(ui, |ui| {
-                                    for suit in Suit::iter() {
+                                    for suit in example::Suit::iter() {
                                         ui.selectable_value(
                                             &mut self.next_suit,
                                             suit,
@@ -145,7 +144,7 @@ impl eframe::App for App {
                             egui::ComboBox::from_label("Rank")
                                 .selected_text(format!("{:?}", self.next_rank))
                                 .show_ui(ui, |ui| {
-                                    for rank in Rank::iter() {
+                                    for rank in example::Rank::iter() {
                                         ui.selectable_value(
                                             &mut self.next_rank,
                                             rank,
@@ -158,7 +157,7 @@ impl eframe::App for App {
                     if ui.button("Add").clicked() {
                         let x = rand::thread_rng().gen_range(0..self.screen_width as i32) as f32;
                         let y = rand::thread_rng().gen_range(0..self.screen_height as i32) as f32;
-                        let card = card::ConventionalCard {
+                        let card = example::ConventionalCard {
                             suit: self.next_suit.clone(),
                             rank: self.next_rank.clone(),
                             pos: egui::Pos2::from((x, y)),
