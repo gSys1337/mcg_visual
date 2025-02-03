@@ -209,18 +209,12 @@ impl Iterator for ConventionalCardIter {
     fn next(&mut self) -> Option<Self::Item> {
         let rank = self.rank.value;
         let suit = self.suit.value;
-        match rank {
-            None => match suit {
-                None => {
-                    return None;
-                }
-                Some(_) => {
-                    self.rank = Default::default();
-                    self.suit.next();
-                }
-            },
-            Some(_) => {
-                ()
+        if rank.is_none() {
+            if suit.is_none() {
+                return None;
+            } else {
+                self.rank = Default::default();
+                self.suit.next();
             }
         }
         Some(ConventionalCard {
