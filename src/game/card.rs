@@ -1,118 +1,18 @@
 #[cfg(target_arch = "wasm32")]
 use crate::log;
 use egui;
+use std::fmt;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub struct ConventionalCard {
     pub suit: Suit,
     pub rank: Rank,
     pub pos: egui::Pos2,
 }
 
-#[derive(Clone, PartialEq, Debug, Default, Copy)]
-pub enum Suit {
-    #[default]
-    Heart,
-    Diamond,
-    Club,
-    Spade,
-}
-
-#[derive(Clone, Default, Debug, PartialEq, PartialOrd, Copy)]
-pub enum Rank {
-    #[default]
-    Ace,
-    Two,
-    Three,
-    Four,
-    Five,
-    Six,
-    Seven,
-    Eight,
-    Nine,
-    Ten,
-    Jack,
-    Queen,
-    King,
-}
-
-impl Suit {
-    pub fn as_path_str(&self) -> &'static str {
-        match self {
-            Suit::Heart => "heart",
-            Suit::Diamond => "diamond",
-            Suit::Club => "club",
-            Suit::Spade => "spade",
-        }
-    }
-
-    pub fn name_str(&self) -> &'static str {
-        match self {
-            Suit::Heart => "Heart",
-            Suit::Diamond => "Diamond",
-            Suit::Club => "Club",
-            Suit::Spade => "Spade",
-        }
-    }
-
-    pub fn all_vec() -> Vec<Suit> {
-        vec![Suit::Heart, Suit::Diamond, Suit::Club, Suit::Spade]
-    }
-}
-
-impl Rank {
-    pub fn as_path_str(&self) -> &'static str {
-        match self {
-            Rank::Ace => "1",
-            Rank::Two => "2",
-            Rank::Three => "3",
-            Rank::Four => "4",
-            Rank::Five => "5",
-            Rank::Six => "6",
-            Rank::Seven => "7",
-            Rank::Eight => "8",
-            Rank::Nine => "9",
-            Rank::Ten => "10",
-            Rank::Jack => "11",
-            Rank::Queen => "12",
-            Rank::King => "13",
-        }
-    }
-
-    pub fn all_vec() -> Vec<Rank> {
-        vec![
-            Rank::Ace,
-            Rank::Two,
-            Rank::Three,
-            Rank::Four,
-            Rank::Five,
-            Rank::Six,
-            Rank::Seven,
-            Rank::Eight,
-            Rank::Nine,
-            Rank::Ten,
-            Rank::Jack,
-            Rank::Queen,
-            Rank::King,
-        ]
-    }
-}
-
 impl ConventionalCard {
-    fn all_cards() -> Vec<ConventionalCard> {
-        let mut cards: Vec<ConventionalCard> = Vec::new();
-        let suits = Suit::all_vec();
-        let ranks = Rank::all_vec();
-        for suit in suits.iter() {
-            for rank in ranks.iter() {
-                cards.push(ConventionalCard {
-                    rank: *rank,
-                    suit: *suit,
-                    pos: egui::pos2(100.0, 100.0),
-                })
-            }
-        }
-        cards
+    pub fn iter() -> ConventionalCardIter {
+        Default::default()
     }
 
     pub fn load_image_sources() -> Vec<Vec<egui::ImageSource<'static>>> {
@@ -121,7 +21,7 @@ impl ConventionalCard {
         let mut diamonds = Vec::new();
         let mut clubs = Vec::new();
         let mut spades = Vec::new();
-        for card in ConventionalCard::all_cards() {
+        for card in ConventionalCard::iter() {
             match card.suit {
                 Suit::Heart => match card.rank {
                     Rank::Ace => {
@@ -286,18 +186,158 @@ impl ConventionalCard {
     }
 
     pub fn get_source_index(&self) -> (usize, usize) {
-        let first = match self.suit {
-            Suit::Heart => 0,
-            Suit::Diamond => 1,
-            Suit::Club => 2,
-            Suit::Spade => 3,
-        };
-        let second = self
-            .rank
-            .as_path_str()
-            .parse::<usize>()
-            .expect("Every Rank member has a str which is correct")
-            - 1;
+        let first = self.suit as usize;
+        let second = self.rank as usize;
         (first, second)
+    }
+}
+
+pub struct ConventionalCardIter {
+    suit: SuitIter,
+    rank: RankIter,
+}
+
+impl Default for ConventionalCardIter {
+    fn default() -> Self {
+        Self { suit: Default::default(), rank: Default::default() }
+    }
+}
+
+impl Iterator for ConventionalCardIter {
+    type Item = ConventionalCard;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let rank = self.rank.value;
+        let suit = self.suit.value;
+        match rank {
+            None => match suit {
+                None => {
+                    return None;
+                }
+                Some(_) => {
+                    self.rank = Default::default();
+                    self.suit.next();
+                }
+            },
+            Some(_) => {
+                ()
+            }
+        }
+        Some(ConventionalCard {
+            rank: self.rank.next()?,
+            suit: self.suit.value?,
+            pos: Default::default(),
+        })
+    }
+}
+
+
+#[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd, Eq, Ord)]
+pub enum Suit {
+    #[default]
+    Heart,
+    Diamond,
+    Club,
+    Spade,
+}
+
+impl fmt::Display for Suit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self:?}")
+    }
+}
+
+impl Suit {
+    pub fn iter() -> SuitIter {
+        Default::default()
+    }
+}
+
+pub struct SuitIter {
+    value: Option<Suit>,
+}
+
+impl Default for SuitIter {
+    fn default() -> Self {
+        Self { value: Some(Default::default()) }
+    }
+}
+
+impl Iterator for SuitIter {
+    type Item = Suit;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let current = self.value;
+        match self.value? {
+            Suit::Heart => self.value = Some(Suit::Diamond),
+            Suit::Diamond => self.value = Some(Suit::Club),
+            Suit::Club => self.value = Some(Suit::Spade),
+            Suit::Spade => self.value = None,
+        };
+        current
+    }
+}
+
+#[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd, Eq, Ord)]
+pub enum Rank {
+    #[default]
+    Ace,
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
+    Seven,
+    Eight,
+    Nine,
+    Ten,
+    Jack,
+    Queen,
+    King,
+}
+
+impl fmt::Display for Rank {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self:?}")
+    }
+}
+
+impl Rank {
+    pub fn iter() -> RankIter {
+        Default::default()
+    }
+}
+
+pub struct RankIter {
+    value: Option<Rank>,
+}
+
+impl Default for RankIter {
+    fn default() -> Self {
+        Self { value: Some(Default::default()) }
+    }
+}
+
+impl Iterator for RankIter {
+    type Item = Rank;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let current = self.value;
+        match self.value? {
+            Rank::Ace => self.value = Some(Rank::Two),
+            Rank::Two => self.value = Some(Rank::Three),
+            Rank::Three => self.value = Some(Rank::Four),
+            Rank::Four => self.value = Some(Rank::Five),
+            Rank::Five => self.value = Some(Rank::Six),
+            Rank::Six => self.value = Some(Rank::Seven),
+            Rank::Seven => self.value = Some(Rank::Eight),
+            Rank::Eight => self.value = Some(Rank::Nine),
+            Rank::Nine => self.value = Some(Rank::Ten),
+            Rank::Ten => self.value = Some(Rank::Jack),
+            Rank::Jack => self.value = Some(Rank::Queen),
+            Rank::Queen => self.value = Some(Rank::King),
+            Rank::King => self.value = None,
+        };
+        current
     }
 }

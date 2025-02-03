@@ -16,10 +16,26 @@ pub struct App {
     cards: Vec<card::ConventionalCard>,
     next_suit: Suit,
     next_rank: Rank,
-    next_suit_idx: usize,
-    next_rank_idx: usize,
     screen_width: f32,
     screen_height: f32,
+}
+
+impl App {
+    pub fn new(cc: &eframe::CreationContext) -> Self {
+        egui_extras::install_image_loaders(&cc.egui_ctx);
+        crate::utils::set_panic_hook();
+        #[cfg(target_arch = "wasm32")]
+        log("New App created.");
+        Self {
+            current_state: Anchor::Menu,
+            card_sources: card::ConventionalCard::load_image_sources(),
+            cards: vec![],
+            next_suit: Default::default(),
+            next_rank: Default::default(),
+            screen_width: 0.0,
+            screen_height: 0.0,
+        }
+    }
 }
 
 enum Anchor {
@@ -50,7 +66,7 @@ impl eframe::App for App {
 
             // Mutate global styles with new text styles
             ctx.all_styles_mut(move |style| style.text_styles = text_styles.clone());
-            
+
             let layout =
                 egui::Layout::from_main_dir_and_cross_align(Direction::TopDown, Align::Center);
             ui.with_layout(layout, |ui| match self.current_state {
@@ -110,18 +126,12 @@ impl eframe::App for App {
                         .current_pos(ui.next_widget_position())
                         .show(ctx, |ui| {
                             egui::ComboBox::from_label("Suit")
-                                .selected_text(format!("{:?}", self.next_suit)) //.wrap_mode(egui::TextWrapMode::Truncate)
-                                /*.show_index(
-                                    ui,
-                                    self.next_suit_idx.borrow_mut(),
-                                    card::Suit::all_vec().len(),
-                                    |i| format!("{:?}", card::Suit::all_vec()[i]),
-                                );*/
+                                .selected_text(format!("{:?}", self.next_suit))
                                 .show_ui(ui, |ui| {
-                                    for suit in Suit::all_vec().iter() {
+                                    for suit in Suit::iter() {
                                         ui.selectable_value(
                                             &mut self.next_suit,
-                                            *suit,
+                                            suit,
                                             format!("{:?}", suit),
                                         );
                                     }
@@ -135,10 +145,10 @@ impl eframe::App for App {
                             egui::ComboBox::from_label("Rank")
                                 .selected_text(format!("{:?}", self.next_rank))
                                 .show_ui(ui, |ui| {
-                                    for rank in Rank::all_vec().iter() {
+                                    for rank in Rank::iter() {
                                         ui.selectable_value(
                                             &mut self.next_rank,
-                                            *rank,
+                                            rank,
                                             format!("{:?}", rank),
                                         );
                                     }
@@ -160,25 +170,5 @@ impl eframe::App for App {
                 }
             });
         });
-    }
-}
-
-impl App {
-    pub fn new(cc: &eframe::CreationContext) -> Self {
-        egui_extras::install_image_loaders(&cc.egui_ctx);
-        crate::utils::set_panic_hook();
-        #[cfg(target_arch = "wasm32")]
-        log("New App created.");
-        Self {
-            current_state: Anchor::Menu,
-            card_sources: card::ConventionalCard::load_image_sources(),
-            cards: vec![],
-            next_suit: Default::default(),
-            next_rank: Default::default(),
-            screen_width: 0.0,
-            screen_height: 0.0,
-            next_suit_idx: 0,
-            next_rank_idx: 0,
-        }
     }
 }
