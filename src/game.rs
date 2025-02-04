@@ -1,6 +1,6 @@
 pub mod card;
 
-use crate::game::card::example;
+use crate::game::card::{example, Card};
 #[cfg(target_arch = "wasm32")]
 use crate::log;
 use eframe::emath::Align;
@@ -17,6 +17,7 @@ pub struct App {
     next_rank: example::Rank,
     screen_width: f32,
     screen_height: f32,
+    back: card::Backside,
 }
 
 impl App {
@@ -33,6 +34,7 @@ impl App {
             next_rank: Default::default(),
             screen_width: 0.0,
             screen_height: 0.0,
+            back: card::Backside::new(),
         }
     }
 }
@@ -88,6 +90,7 @@ impl eframe::App for App {
                     if ui.add(back).clicked() {
                         #[cfg(target_arch = "wasm32")]
                         log("back to main menu");
+                        self.back.printed = false;
                         self.current_state = Anchor::Menu;
                     }
                     let sources = &self.card_sources;
@@ -105,11 +108,14 @@ impl eframe::App for App {
                                 if resp.is_pointer_button_down_on() {
                                     let new = card.pos.add(resp.drag_delta());
                                     card.pos = new;
-                                    //#[cfg(target_arch = "wasm32")]
-                                    //log(format!("card.pos: {:?}", new).as_str());
                                 }
                             });
                     }
+                    egui::Area::new(egui::Id::new(69420))
+                        .sense(egui::Sense::click_and_drag())
+                        .current_pos(egui::Pos2::new(500.0, 500.0))
+                        .default_size((100.0, 144.0))
+                        .show(&ctx, |ui| self.back.draw(ui));
                 }
                 Anchor::Settings => {
                     let back = egui::Button::new("Back");
