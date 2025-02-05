@@ -16,21 +16,22 @@ pub struct App {
     next_rank: example::Rank,
     screen_width: f32,
     screen_height: f32,
-    back: card::Backside,
 }
 
 impl App {
+    #[allow(unused)]
     pub fn new(cc: &eframe::CreationContext) -> Self {
-        egui_extras::install_image_loaders(&cc.egui_ctx);
         crate::utils::set_panic_hook();
+        egui_extras::install_image_loaders(&cc.egui_ctx);
+        let mut cards: Vec<Box<dyn Card>> = Vec::new();
+        cards.push(Box::new(example::Backside::new()));
         Self {
             current_state: Anchor::Menu,
-            cards: vec![],
+            cards,
             next_suit: Default::default(),
             next_rank: Default::default(),
             screen_width: 0.0,
             screen_height: 0.0,
-            back: card::Backside::new(),
         }
     }
 }
@@ -101,11 +102,6 @@ impl eframe::App for App {
                             card.translate(r.drag_delta());
                         }
                     }
-                    egui::Area::new(egui::Id::new(69420))
-                        .sense(egui::Sense::click_and_drag())
-                        .current_pos(egui::Pos2::new(500.0, 500.0))
-                        .default_size((100.0, 144.0))
-                        .show(&ctx, |ui| ui.add(&self.back as &dyn Card));
                 }
                 Anchor::Settings => {
                     let back = egui::Button::new("Back");

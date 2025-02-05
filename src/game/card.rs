@@ -21,23 +21,3 @@ impl egui::Widget for &dyn Card {
         ui.add(img)
     }
 }
-
-pub struct Backside {}
-
-impl Backside {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl Card for Backside {
-    fn img_path(&self) -> String {
-        "https://placehold.co/100x144/png?text=Hello World!".to_string()
-    }
-
-    fn pos(&self) -> egui::Pos2 {
-        egui::pos2(500.0, 500.0)
-    }
-
-    fn translate(&mut self, _amt: egui::Vec2) {}
-}
