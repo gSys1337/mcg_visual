@@ -99,7 +99,7 @@ impl eframe::App for App {
                             .sense(egui::Sense::click_and_drag())
                             .current_pos(card.pos)
                             .show(&ctx, |ui| {
-                                let (idx_suit, idx_rank) = card.get_source_index();
+                                /*let (idx_suit, idx_rank) = card.get_source_index();
                                 let card_img =
                                     egui::Image::new(sources[idx_suit][idx_rank].clone())
                                         .sense(egui::Sense::click_and_drag())
@@ -108,7 +108,8 @@ impl eframe::App for App {
                                 if resp.is_pointer_button_down_on() {
                                     let new = card.pos.add(resp.drag_delta());
                                     card.pos = new;
-                                }
+                                }*/
+                                card.draw(ui)
                             });
                     }
                     egui::Area::new(egui::Id::new(69420))
