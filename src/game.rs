@@ -2,17 +2,16 @@ pub mod card;
 
 use crate::game::card::{example, Card};
 #[cfg(target_arch = "wasm32")]
+#[allow(unused_imports)]
 use crate::log;
 use eframe::emath::Align;
 use eframe::Frame;
 use egui::{Context, Direction};
 use rand::Rng;
-use std::ops::Add;
 
 pub struct App {
-    card_sources: Vec<Vec<egui::ImageSource<'static>>>,
     current_state: Anchor,
-    cards: Vec<example::ConventionalCard>,
+    cards: Vec<Box<dyn Card>>,
     next_suit: example::Suit,
     next_rank: example::Rank,
     screen_width: f32,
@@ -24,11 +23,8 @@ impl App {
     pub fn new(cc: &eframe::CreationContext) -> Self {
         egui_extras::install_image_loaders(&cc.egui_ctx);
         crate::utils::set_panic_hook();
-        #[cfg(target_arch = "wasm32")]
-        log("New App created.");
         Self {
             current_state: Anchor::Menu,
-            card_sources: example::ConventionalCard::load_image_sources(),
             cards: vec![],
             next_suit: Default::default(),
             next_rank: Default::default(),
@@ -90,33 +86,26 @@ impl eframe::App for App {
                     if ui.add(back).clicked() {
                         #[cfg(target_arch = "wasm32")]
                         log("back to main menu");
-                        self.back.printed = false;
                         self.current_state = Anchor::Menu;
                     }
-                    let sources = &self.card_sources;
                     for (idx, card) in self.cards.iter_mut().enumerate() {
-                        egui::Area::new(egui::Id::new(idx))
+                        let ir = egui::Area::new(egui::Id::new(idx))
                             .sense(egui::Sense::click_and_drag())
-                            .current_pos(card.pos)
+                            .current_pos(card.pos())
                             .show(&ctx, |ui| {
-                                /*let (idx_suit, idx_rank) = card.get_source_index();
-                                let card_img =
-                                    egui::Image::new(sources[idx_suit][idx_rank].clone())
-                                        .sense(egui::Sense::click_and_drag())
-                                        .fit_to_original_size(1.0);
-                                let resp = ui.add(card_img);
-                                if resp.is_pointer_button_down_on() {
-                                    let new = card.pos.add(resp.drag_delta());
-                                    card.pos = new;
-                                }*/
-                                card.draw(ui)
+                                // important to use ``&**card`` because rust gets it somehow wrong ¯\_(ツ)_/¯
+                                ui.add(&**card)
                             });
+                        let r = ir.inner;
+                        if r.is_pointer_button_down_on() {
+                            card.translate(r.drag_delta());
+                        }
                     }
                     egui::Area::new(egui::Id::new(69420))
                         .sense(egui::Sense::click_and_drag())
                         .current_pos(egui::Pos2::new(500.0, 500.0))
                         .default_size((100.0, 144.0))
-                        .show(&ctx, |ui| self.back.draw(ui));
+                        .show(&ctx, |ui| ui.add(&self.back as &dyn Card));
                 }
                 Anchor::Settings => {
                     let back = egui::Button::new("Back");
@@ -169,7 +158,7 @@ impl eframe::App for App {
                             rank: self.next_rank.clone(),
                             pos: egui::Pos2::from((x, y)),
                         };
-                        self.cards.push(card);
+                        self.cards.push(Box::new(card));
                         #[cfg(target_arch = "wasm32")]
                         log(format!("added card @ ({}|{})", x, y).as_str());
                     }

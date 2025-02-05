@@ -1,57 +1,43 @@
 pub mod example;
 
 #[cfg(target_arch = "wasm32")]
+#[allow(unused_imports)]
 use crate::log;
-use egui::{load, Sense};
-use std::ops::Add;
+use egui::Sense;
 
 pub trait Card {
-    fn draw(&mut self, ui: &mut egui::Ui) -> egui::Response;
+    fn img_path(&self) -> String;
+    fn pos(&self) -> egui::Pos2;
+    fn translate(&mut self, amt: egui::Vec2);
 }
 
-pub struct Backside {
-    pub(crate) printed: bool,
-    bytes: Option<load::Bytes>,
-}
-
-impl Backside {
-    pub fn new() -> Self {
-        Self {
-            printed: false,
-            bytes: None,
-        }
-    }
-}
-
-impl Card for Backside {
-    fn draw(&mut self, ui: &mut egui::Ui) -> egui::Response {
-        let img = egui::Image::new(
-            format!("https://placehold.co/100x144/png?text=Hello World!").to_string(),
-        )
-        .show_loading_spinner(true)
-        .sense(Sense::click_and_drag());
-        ui.add(img)
-    }
-}
-
-impl Card for example::ConventionalCard {
-    fn draw(&mut self, ui: &mut egui::Ui) -> egui::Response {
-        let path = format!(
-            "http://127.0.0.1:8080/media/img_cards/{}_{}.png",
-            self.rank as usize + 1,
-            self.suit.to_string().to_lowercase()
-        );
-        #[cfg(target_arch = "wasm32")]
-        log(path.as_str());
+impl egui::Widget for &dyn Card {
+    fn ui(self, ui: &mut egui::Ui) -> egui::Response {
+        let path = self.img_path();
         let img = egui::Image::new(path)
             .show_loading_spinner(true)
             .fit_to_original_size(1.0)
             .sense(Sense::click_and_drag());
-        let r = ui.add(img);
-        if r.is_pointer_button_down_on() {
-            let new = self.pos.add(r.drag_delta());
-            self.pos = new;
-        }
-        r
+        ui.add(img)
     }
+}
+
+pub struct Backside {}
+
+impl Backside {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl Card for Backside {
+    fn img_path(&self) -> String {
+        "https://placehold.co/100x144/png?text=Hello World!".to_string()
+    }
+
+    fn pos(&self) -> egui::Pos2 {
+        egui::pos2(500.0, 500.0)
+    }
+
+    fn translate(&mut self, _amt: egui::Vec2) {}
 }
