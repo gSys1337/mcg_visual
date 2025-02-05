@@ -12,8 +12,8 @@ use rand::Rng;
 pub struct App {
     current_state: Anchor,
     cards: Vec<Box<dyn Card>>,
-    next_suit: example::Suit,
-    next_rank: example::Rank,
+    next_suit: usize,
+    next_rank: usize,
     screen_width: f32,
     screen_height: f32,
 }
@@ -112,46 +112,36 @@ impl eframe::App for App {
                         log("back to main menu");
                         self.current_state = Anchor::Menu;
                     }
-                    let ir = egui::Area::new(egui::Id::new("suit"))
+                    let suit_area = egui::Area::new(egui::Id::new("suit"))
                         .sense(egui::Sense::click())
-                        .current_pos(ui.next_widget_position())
-                        .show(ctx, |ui| {
-                            egui::ComboBox::from_label("Suit")
-                                .selected_text(format!("{:?}", self.next_suit))
-                                .show_ui(ui, |ui| {
-                                    for suit in example::Suit::iter() {
-                                        ui.selectable_value(
-                                            &mut self.next_suit,
-                                            suit,
-                                            format!("{:?}", suit),
-                                        );
-                                    }
-                                });
-                        });
+                        .current_pos(ui.next_widget_position());
+                    let ir = suit_area.show(ctx, |ui| {
+                        egui::ComboBox::from_label("Suit").show_index(
+                            ui,
+                            &mut self.next_suit,
+                            example::Suit::len(),
+                            |idx| format!("{}", example::Suit::from(idx)),
+                        )
+                    });
                     ui.advance_cursor_after_rect(ir.response.rect);
-                    let ir = egui::Area::new(egui::Id::new("rank"))
+                    let rank_area = egui::Area::new(egui::Id::new("rank"))
                         .sense(egui::Sense::click())
-                        .current_pos(ui.next_widget_position())
-                        .show(ctx, |ui| {
-                            egui::ComboBox::from_label("Rank")
-                                .selected_text(format!("{:?}", self.next_rank))
-                                .show_ui(ui, |ui| {
-                                    for rank in example::Rank::iter() {
-                                        ui.selectable_value(
-                                            &mut self.next_rank,
-                                            rank,
-                                            format!("{:?}", rank),
-                                        );
-                                    }
-                                });
-                        });
+                        .current_pos(ui.next_widget_position());
+                    let ir = rank_area.show(ctx, |ui| {
+                        egui::ComboBox::from_label("Rank").show_index(
+                            ui,
+                            &mut self.next_rank,
+                            example::Rank::len(),
+                            |idx| format!("{}", example::Rank::from(idx)),
+                        )
+                    });
                     ui.advance_cursor_after_rect(ir.response.rect);
                     if ui.button("Add").clicked() {
                         let x = rand::thread_rng().gen_range(0..self.screen_width as i32) as f32;
                         let y = rand::thread_rng().gen_range(0..self.screen_height as i32) as f32;
                         let card = example::ConventionalCard {
-                            suit: self.next_suit.clone(),
-                            rank: self.next_rank.clone(),
+                            suit: example::Suit::from(self.next_suit),
+                            rank: example::Rank::from(self.next_rank),
                             pos: egui::Pos2::from((x, y)),
                         };
                         self.cards.push(Box::new(card));

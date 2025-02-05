@@ -4,7 +4,6 @@ use crate::game::card;
 use crate::log;
 use egui;
 use std::fmt;
-use crate::game::card::Card;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub struct ConventionalCard {
@@ -89,8 +88,27 @@ impl fmt::Display for Suit {
 }
 
 impl Suit {
+    #[allow(unused)]
     pub fn iter() -> SuitIter {
         Default::default()
+    }
+
+    pub const fn len() -> usize {
+        4
+    }
+}
+
+impl From<usize> for Suit {
+    fn from(index: usize) -> Self {
+        match index {
+            0 => Suit::Heart,
+            1 => Suit::Diamond,
+            2 => Suit::Club,
+            3 => Suit::Spade,
+            _ => {
+                panic!("Invalid index: {}", index)
+            }
+        }
     }
 }
 
@@ -146,8 +164,36 @@ impl fmt::Display for Rank {
 }
 
 impl Rank {
+    #[allow(unused)]
     pub fn iter() -> RankIter {
         Default::default()
+    }
+
+    pub const fn len() -> usize {
+        13
+    }
+}
+
+impl From<usize> for Rank {
+    fn from(index: usize) -> Self {
+        match index {
+            0 => Rank::Ace,
+            1 => Rank::Two,
+            2 => Rank::Three,
+            3 => Rank::Four,
+            4 => Rank::Five,
+            5 => Rank::Six,
+            6 => Rank::Seven,
+            7 => Rank::Eight,
+            8 => Rank::Nine,
+            9 => Rank::Ten,
+            10 => Rank::Jack,
+            11 => Rank::Queen,
+            12 => Rank::King,
+            _ => {
+                panic!("Invalid index: {}", index)
+            }
+        }
     }
 }
 
@@ -195,7 +241,7 @@ impl Backside {
     }
 }
 
-impl Card for Backside {
+impl card::Card for Backside {
     fn img_path(&self) -> String {
         "https://placehold.co/100x144/png?text=Hello World!".to_string()
     }
