@@ -1,5 +1,6 @@
 mod utils;
 mod game;
+pub mod example;
 
 #[cfg(target_arch="wasm32")]
 use wasm_bindgen::prelude::*;

@@ -1,6 +1,8 @@
 pub mod card;
+use crate::example;
+pub mod vfx;
 
-use crate::game::card::{example, Card};
+pub use crate::game::card::Card;
 #[cfg(target_arch = "wasm32")]
 #[allow(unused_imports)]
 use crate::log;
@@ -16,6 +18,7 @@ pub struct App {
     next_rank: usize,
     screen_width: f32,
     screen_height: f32,
+    hand: vfx::HandLayout,
 }
 
 impl App {
@@ -24,7 +27,7 @@ impl App {
         crate::utils::set_panic_hook();
         egui_extras::install_image_loaders(&cc.egui_ctx);
         let mut cards: Vec<Box<dyn Card>> = Vec::new();
-        cards.push(Box::new(example::Backside::new()));
+        // cards.push(Box::new(example::Backside::new()));
         Self {
             current_state: Anchor::Menu,
             cards,
@@ -32,6 +35,7 @@ impl App {
             next_rank: Default::default(),
             screen_width: 0.0,
             screen_height: 0.0,
+            hand: Default::default(),
         }
     }
 }
@@ -89,6 +93,12 @@ impl eframe::App for App {
                         log("back to main menu");
                         self.current_state = Anchor::Menu;
                     }
+                    egui::Area::new("hand_area".into())
+                        .sense(egui::Sense::all())
+                        // .current_pos(self.hand.pos)
+                        .show(&ctx, |ui| {
+                            ui.add_sized(self.hand.size, &mut self.hand);
+                        });
                     for (idx, card) in self.cards.iter_mut().enumerate() {
                         let ir = egui::Area::new(egui::Id::new(idx))
                             .sense(egui::Sense::click_and_drag())
@@ -147,6 +157,10 @@ impl eframe::App for App {
                         self.cards.push(Box::new(card));
                         #[cfg(target_arch = "wasm32")]
                         log(format!("added card @ ({}|{})", x, y).as_str());
+                    }
+                    if ui.button("Random").clicked() {
+                        self.hand
+                            .add_card(Box::new(example::ConventionalCard::new_random()));
                     }
                 }
             });
