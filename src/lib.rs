@@ -1,5 +1,5 @@
 mod utils;
-mod game;
+pub mod game;
 pub mod example;
 
 #[cfg(target_arch="wasm32")]

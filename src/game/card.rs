@@ -1,7 +1,7 @@
+use egui::Sense;
 #[cfg(target_arch = "wasm32")]
 #[allow(unused_imports)]
 use crate::log;
-use egui::Sense;
 
 pub trait Card {
     fn img_path(&self) -> String;

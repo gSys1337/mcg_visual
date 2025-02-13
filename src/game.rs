@@ -1,15 +1,14 @@
-pub mod card;
-use crate::example;
-pub mod vfx;
+use eframe::emath;
+use egui::{Context, Direction};
+use rand::Rng;
 
-pub use crate::game::card::Card;
 #[cfg(target_arch = "wasm32")]
 #[allow(unused_imports)]
 use crate::log;
-use eframe::emath::Align;
-use eframe::Frame;
-use egui::{Context, Direction};
-use rand::Rng;
+pub mod card;
+pub mod vfx;
+pub use crate::game::card::Card;
+use crate::example;
 
 pub struct App {
     current_state: Anchor,
@@ -52,7 +51,7 @@ use egui::TextStyle::*;
 use std::collections::BTreeMap;
 
 impl eframe::App for App {
-    fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
+    fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             let size = 30.0;
             let text_styles: BTreeMap<_, _> = [
@@ -70,7 +69,7 @@ impl eframe::App for App {
             ctx.all_styles_mut(move |style| style.text_styles = text_styles.clone());
 
             let layout =
-                egui::Layout::from_main_dir_and_cross_align(Direction::TopDown, Align::Center);
+                egui::Layout::from_main_dir_and_cross_align(Direction::TopDown, emath::Align::Center);
             ui.with_layout(layout, |ui| match self.current_state {
                 Anchor::Menu => {
                     let start = egui::Button::new("Start Game");

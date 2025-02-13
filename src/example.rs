@@ -1,10 +1,10 @@
+use egui;
+use std::fmt;
+use rand::Rng;
 use crate::game::card;
 #[cfg(target_arch = "wasm32")]
 #[allow(unused_imports)]
 use crate::log;
-use egui;
-use std::fmt;
-use rand::Rng;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub struct ConventionalCard {
