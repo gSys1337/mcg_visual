@@ -1,7 +1,6 @@
+use crate::game;
 use egui::containers::frame;
 use std::ops::Add;
-
-use crate::game;
 
 pub struct HandLayout {
     pub cards: Vec<Box<dyn game::Card>>,
@@ -28,7 +27,7 @@ impl HandLayout {
         let x = if cards <= self.max_cards {
             (100.0 + self.inner_margin as f32) * (idx as f32)
         } else {
-            (self.size.x - 100.0) * (idx as f32) / (cards-1) as f32
+            (self.size.x - 100.0) * (idx as f32) / (cards - 1) as f32
         };
         egui::Vec2::new(x, 0.0)
     }
@@ -56,36 +55,83 @@ impl Default for HandLayout {
 
 impl egui::Widget for &mut HandLayout {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
-        ui.set_max_size(self.size);
-        ui.set_min_size(self.size);
-        let inner_margin = 5.0;
-        let frame = frame::Frame::new()
-            .inner_margin(egui::Margin::same(inner_margin as i8))
-            .outer_margin(egui::Margin::same(5))
-            .stroke(egui::Stroke::new(2.0, egui::Color32::DEBUG_COLOR))
-            .fill(egui::Color32::DARK_GREEN)
-            .corner_radius(egui::CornerRadius::same(5));
-        frame
-            .show(ui, |ui| {
-                let next_pos = ui.next_widget_position();
-                ui.allocate_new_ui(
-                    egui::UiBuilder::new().max_rect(egui::Rect::from_min_size(next_pos, self.size)),
-                    |ui| {
-                        ui.set_max_size(self.size);
-                        ui.set_min_size(self.size);
-                        for (idx, card) in self.cards.iter().enumerate() {
-                            egui::Area::new(format!("{}", idx + 100).into())
-                                .interactable(false)
-                                .sense(egui::Sense::all())
-                                .current_pos(ui.next_widget_position().add(self.card_pos(idx)))
-                                .show(ui.ctx(), |ui| {
-                                    ui.add(&**card);
-                                });
-                        }
-                    },
-                )
-                .response
+        egui::Area::new(ui.next_auto_id())
+            .current_pos(self.pos)
+            .show(ui.ctx(), |ui| {
+                let pointer = ui.input(|state| state.pointer.clone());
+                let mut selected = None;
+                if pointer.latest_pos().is_some()
+                    && ui.max_rect().contains(pointer.latest_pos().unwrap())
+                {
+                    let left = ui.max_rect().left();
+                    let right = ui.max_rect().right();
+                    let selector = self.cards.len() as f32
+                        * (pointer
+                            .latest_pos()
+                            .unwrap_or_else(|| egui::pos2(left, 0.0))
+                            .x
+                            - left)
+                        / (right - left);
+                    selected = Some(selector as usize);
+                }
+                frame::Frame::new()
+                    .inner_margin(egui::Margin::same(self.inner_margin))
+                    .outer_margin(egui::Margin::same(5))
+                    .stroke(egui::Stroke::new(2.0, egui::Color32::DEBUG_COLOR))
+                    .fill(egui::Color32::DARK_GREEN)
+                    .corner_radius(egui::CornerRadius::same(5))
+                    .show(ui, |ui| {
+                        let next_pos = ui.next_widget_position();
+                        ui.allocate_new_ui(
+                            egui::UiBuilder::new()
+                                .max_rect(egui::Rect::from_min_size(next_pos, self.size)),
+                            |ui| {
+                                ui.set_max_size(self.size);
+                                ui.set_min_size(self.size);
+                                for (idx, card) in self.cards.iter().enumerate() {
+                                    let card_pos = next_pos.add(self.card_pos(idx));
+                                    if selected.is_some() && idx == selected.unwrap() {
+                                        continue;
+                                    }
+                                    egui::Area::new(ui.next_auto_id())
+                                        .sense(egui::Sense::all())
+                                        .current_pos(card_pos)
+                                        .show(ui.ctx(), |ui| {
+                                            ui.add(&**card);
+                                        });
+                                }
+                                if selected.is_some() {
+                                    self.cards.get(selected.unwrap()).map(|card| {
+                                        let card_pos = next_pos
+                                            .add(self.card_pos(selected.unwrap()))
+                                            .add(egui::vec2(0.0, -10.0));
+                                        egui::Area::new(ui.next_auto_id())
+                                            .sense(egui::Sense::all())
+                                            .current_pos(card_pos)
+                                            .show(ui.ctx(), |ui| {
+                                                egui::Frame::new()
+                                                    .stroke(egui::Stroke::new(
+                                                        2.0,
+                                                        egui::Color32::RED,
+                                                    ))
+                                                    .corner_radius(egui::CornerRadius::same(2))
+                                                    .show(ui, |ui| {
+                                                        ui.allocate_new_ui(
+                                                            egui::UiBuilder::new(),
+                                                            |ui| {
+                                                                ui.add(card.as_ref());
+                                                            },
+                                                        );
+                                                    });
+                                            });
+                                    });
+                                }
+                            },
+                        )
+                        .response
+                    })
+                    .inner
             })
-            .response
+            .inner
     }
 }
