@@ -7,8 +7,8 @@ use rand::Rng;
 use crate::log;
 pub mod card;
 pub mod vfx;
-pub use crate::game::card::Card;
 use crate::example;
+pub use crate::game::card::Card;
 
 pub struct App {
     current_state: Anchor,
@@ -68,8 +68,10 @@ impl eframe::App for App {
             // Mutate global styles with new text styles
             ctx.all_styles_mut(move |style| style.text_styles = text_styles.clone());
 
-            let layout =
-                egui::Layout::from_main_dir_and_cross_align(Direction::TopDown, emath::Align::Center);
+            let layout = egui::Layout::from_main_dir_and_cross_align(
+                Direction::TopDown,
+                emath::Align::Center,
+            );
             ui.with_layout(layout, |ui| match self.current_state {
                 Anchor::Menu => {
                     let start = egui::Button::new("Start Game");
@@ -93,17 +95,18 @@ impl eframe::App for App {
                         self.current_state = Anchor::Menu;
                     }
                     egui::Area::new("hand_area".into())
-                        .sense(egui::Sense::all())
-                        // .current_pos(self.hand.pos)
-                        .show(&ctx, |ui| {
-                            ui.add_sized(self.hand.size, &mut self.hand);
-                        });
+                        //.sense(egui::Sense::empty())
+                        .interactable(false)
+                        .current_pos(self.hand.pos)
+                        .show(&ctx, |ui| ui.add(&mut self.hand));
                     for (idx, card) in self.cards.iter_mut().enumerate() {
                         let ir = egui::Area::new(egui::Id::new(idx))
                             .sense(egui::Sense::click_and_drag())
                             .current_pos(card.pos())
                             .show(&ctx, |ui| {
                                 // important to use ``&**card`` because rust gets it somehow wrong ¯\_(ツ)_/¯
+                                // i assume this is an "issue" with deref coercion because
+                                // Rust can include `*`s at compile-time but no `&`
                                 ui.add(&**card)
                             });
                         let r = ir.inner;
