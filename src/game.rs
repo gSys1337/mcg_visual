@@ -18,6 +18,7 @@ pub struct App {
     screen_width: f32,
     screen_height: f32,
     hand: vfx::HandLayout,
+    stack: vfx::Stack,
 }
 
 impl App {
@@ -27,9 +28,13 @@ impl App {
         egui_extras::install_image_loaders(&cc.egui_ctx);
         let mut cards: Vec<Box<dyn Card>> = Vec::new();
         // cards.push(Box::new(example::Backside::new()));
-        let mut hand: HandLayout = Default::default();
+        let mut hand: vfx::HandLayout = Default::default();
         for _ in 0..10 {
             hand.add_card(Box::new(example::ConventionalCard::new_random()));
+        }
+        let mut stack: vfx::Stack = Default::default();
+        for _ in 0..10 {
+            stack.add_card(Box::new(example::ConventionalCard::new_random()));
         }
         Self {
             current_state: Anchor::Menu,
@@ -39,6 +44,7 @@ impl App {
             screen_width: 0.0,
             screen_height: 0.0,
             hand,
+            stack
         }
     }
 }
@@ -49,7 +55,6 @@ enum Anchor {
     Settings,
 }
 
-use crate::game::vfx::HandLayout;
 use egui::FontFamily::Proportional;
 use egui::FontId;
 use egui::TextStyle::*;
@@ -100,6 +105,7 @@ impl eframe::App for App {
                         self.current_state = Anchor::Menu;
                     }
                     ui.add(&mut self.hand);
+                    ui.add(&mut self.stack);
                     for (idx, card) in self.cards.iter_mut().enumerate() {
                         let ir = egui::Area::new(egui::Id::new(idx))
                             .sense(egui::Sense::click_and_drag())

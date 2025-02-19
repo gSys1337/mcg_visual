@@ -16,7 +16,7 @@ impl HandLayout {
     }
     pub fn max_cards(&mut self, max_cards: usize) {
         let size = egui::Vec2::new(
-            (100.0 + self.inner_margin as f32) * max_cards as f32 - max_cards as f32,
+            (100.0 + self.inner_margin as f32) * max_cards as f32 - self.inner_margin as f32,
             144.0,
         );
         self.size = size;
@@ -35,21 +35,15 @@ impl HandLayout {
 
 impl Default for HandLayout {
     fn default() -> Self {
-        let cards = vec![];
-        let inner_margin = 5;
-        let max_cards = 5;
-        let pos = egui::Pos2::new(69.0, 420.0);
-        let size = egui::Vec2::new(
-            (100.0 + inner_margin as f32) * max_cards as f32 - max_cards as f32,
-            144.0,
-        );
-        Self {
-            cards,
-            pos,
-            size,
-            inner_margin,
-            max_cards,
-        }
+        let mut x = Self {
+            cards: vec![],
+            pos: egui::Pos2::new(69.0, 420.0),
+            size: Default::default(),
+            inner_margin: 5,
+            max_cards: 0,
+        };
+        x.max_cards(5);
+        x
     }
 }
 
@@ -129,6 +123,87 @@ impl egui::Widget for &mut HandLayout {
                                                     });
                                             });
                                     });
+                                }
+                            },
+                        )
+                        .response
+                    })
+                    .inner
+            })
+            .inner
+    }
+}
+
+pub struct Stack {
+    pub cards: Vec<Box<dyn game::Card>>,
+    pub pos: egui::Pos2,
+    size: egui::Vec2,
+    pub inner_margin: i8,
+    max_cards: usize,
+}
+impl Stack {
+    pub fn add_card(&mut self, card: Box<dyn game::Card>) {
+        self.cards.push(card);
+    }
+    fn card_pos(&self, idx: usize) -> egui::Vec2 {
+        let x = if idx <= self.max_cards {
+            idx as f32
+        } else {
+            self.max_cards as f32
+        };
+        egui::Vec2::new(x, -x + self.inner_margin as f32)
+    }
+    pub fn max_cards(&mut self, max_cards: usize) {
+        let size = egui::Vec2::new(100.0 + max_cards as f32, 144.0 + max_cards as f32);
+        self.size = size;
+        self.max_cards = max_cards;
+    }
+}
+
+impl Default for Stack {
+    fn default() -> Self {
+        let mut x = Self {
+            cards: vec![],
+            pos: egui::pos2(314.15, 217.18),
+            size: Default::default(),
+            inner_margin: 5,
+            max_cards: 0,
+        };
+        x.max_cards(5);
+        x
+    }
+}
+
+impl egui::Widget for &mut Stack {
+    fn ui(self, ui: &mut egui::Ui) -> egui::Response {
+        egui::Area::new(ui.next_auto_id())
+            .current_pos(self.pos)
+            .sense(egui::Sense::empty())
+            .show(ui.ctx(), |ui| {
+                frame::Frame::new()
+                    .inner_margin(egui::Margin::same(self.inner_margin))
+                    .outer_margin(egui::Margin::same(5))
+                    .stroke(egui::Stroke::new(2.0, egui::Color32::DEBUG_COLOR))
+                    .fill(egui::Color32::DARK_GREEN)
+                    .corner_radius(egui::CornerRadius::same(5))
+                    .show(ui, |ui| {
+                        let next_pos = ui.next_widget_position();
+                        ui.allocate_new_ui(
+                            egui::UiBuilder::new()
+                                .max_rect(egui::Rect::from_min_size(next_pos, self.size))
+                                .layer_id(egui::LayerId::background()),
+                            |ui| {
+                                ui.set_max_size(self.size);
+                                ui.set_min_size(self.size);
+                                for (idx, card) in self.cards.iter().enumerate() {
+                                    let card_pos = next_pos.add(self.card_pos(idx));
+                                    egui::Area::new(ui.next_auto_id())
+                                        .order(egui::Order::Foreground)
+                                        .sense(egui::Sense::all())
+                                        .current_pos(card_pos)
+                                        .show(ui.ctx(), |ui| {
+                                            ui.add(&**card);
+                                        });
                                 }
                             },
                         )
