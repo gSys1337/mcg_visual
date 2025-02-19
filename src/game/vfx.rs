@@ -57,6 +57,7 @@ impl egui::Widget for &mut HandLayout {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         egui::Area::new(ui.next_auto_id())
             .current_pos(self.pos)
+            .sense(egui::Sense::empty())
             .show(ui.ctx(), |ui| {
                 let pointer = ui.input(|state| state.pointer.clone());
                 let mut selected = None;
@@ -84,7 +85,8 @@ impl egui::Widget for &mut HandLayout {
                         let next_pos = ui.next_widget_position();
                         ui.allocate_new_ui(
                             egui::UiBuilder::new()
-                                .max_rect(egui::Rect::from_min_size(next_pos, self.size)),
+                                .max_rect(egui::Rect::from_min_size(next_pos, self.size))
+                                .layer_id(egui::LayerId::background()),
                             |ui| {
                                 ui.set_max_size(self.size);
                                 ui.set_min_size(self.size);
@@ -94,6 +96,7 @@ impl egui::Widget for &mut HandLayout {
                                         continue;
                                     }
                                     egui::Area::new(ui.next_auto_id())
+                                        .order(egui::Order::Foreground)
                                         .sense(egui::Sense::all())
                                         .current_pos(card_pos)
                                         .show(ui.ctx(), |ui| {
@@ -106,6 +109,7 @@ impl egui::Widget for &mut HandLayout {
                                             .add(self.card_pos(selected.unwrap()))
                                             .add(egui::vec2(0.0, -10.0));
                                         egui::Area::new(ui.next_auto_id())
+                                            .order(egui::Order::Foreground)
                                             .sense(egui::Sense::all())
                                             .current_pos(card_pos)
                                             .show(ui.ctx(), |ui| {
