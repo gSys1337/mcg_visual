@@ -53,22 +53,6 @@ impl egui::Widget for &mut HandLayout {
             .current_pos(self.pos)
             .sense(egui::Sense::empty())
             .show(ui.ctx(), |ui| {
-                let pointer = ui.input(|state| state.pointer.clone());
-                let mut selected = None;
-                if pointer.latest_pos().is_some()
-                    && ui.max_rect().contains(pointer.latest_pos().unwrap())
-                {
-                    let left = ui.max_rect().left();
-                    let right = ui.max_rect().right();
-                    let selector = self.cards.len() as f32
-                        * (pointer
-                            .latest_pos()
-                            .unwrap_or_else(|| egui::pos2(left, 0.0))
-                            .x
-                            - left)
-                        / (right - left);
-                    selected = Some(selector as usize);
-                }
                 frame::Frame::new()
                     .inner_margin(egui::Margin::same(self.inner_margin))
                     .outer_margin(egui::Margin::same(5))
@@ -84,6 +68,22 @@ impl egui::Widget for &mut HandLayout {
                             |ui| {
                                 ui.set_max_size(self.size);
                                 ui.set_min_size(self.size);
+                                let pointer = ui.input(|state| state.pointer.clone());
+                                let mut selected = None;
+                                if pointer.latest_pos().is_some()
+                                    && ui.max_rect().contains(pointer.latest_pos().unwrap())
+                                {
+                                    let left = ui.max_rect().left();
+                                    let right = ui.max_rect().right();
+                                    let selector = self.cards.len() as f32
+                                        * (pointer
+                                            .latest_pos()
+                                            .unwrap_or_else(|| egui::pos2(left, 0.0))
+                                            .x
+                                            - left)
+                                        / (right - left);
+                                    selected = Some(selector as usize);
+                                }
                                 for (idx, card) in self.cards.iter().enumerate() {
                                     let card_pos = next_pos.add(self.card_pos(idx));
                                     if selected.is_some() && idx == selected.unwrap() {
