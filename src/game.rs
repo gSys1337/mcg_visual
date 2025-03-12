@@ -44,15 +44,27 @@ impl App {
             screen_width: 0.0,
             screen_height: 0.0,
             hand,
-            stack
+            stack,
         }
     }
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum Anchor {
     Menu,
     Game,
     Settings,
+}
+
+impl Anchor {
+    fn from_str(s: &str) -> Option<Self> {
+        match s { 
+            "Menu" => Some(Anchor::Menu),
+            "Game" => Some(Anchor::Game),
+            "Settings" => Some(Anchor::Settings),
+            _ => None,
+        }
+    }
 }
 
 use egui::FontFamily::Proportional;
@@ -60,6 +72,7 @@ use egui::FontId;
 use egui::TextStyle::*;
 use std::collections::BTreeMap;
 
+#[cfg(target_arch = "wasm32")]
 impl eframe::App for App {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -82,19 +95,29 @@ impl eframe::App for App {
                 Direction::TopDown,
                 emath::Align::Center,
             );
-            ui.with_layout(layout, |ui| match self.current_state {
+            let window = _frame
+                .info()
+                .web_info
+                .location
+                .hash
+                .strip_prefix('#')
+                .and_then(|s| {Anchor::from_str(s)})
+                .unwrap_or(Anchor::Menu);
+            ui.with_layout(layout, |ui| match window {
                 Anchor::Menu => {
                     let start = egui::Button::new("Start Game");
                     if ui.add(start).clicked() {
                         #[cfg(target_arch = "wasm32")]
                         log("game started");
                         self.current_state = Anchor::Game;
+                        ctx.open_url(egui::OpenUrl::same_tab(format!("#{:?}", Anchor::Game)));
                     };
                     let settings = egui::Button::new("Settings");
                     if ui.add(settings).clicked() {
                         #[cfg(target_arch = "wasm32")]
                         log("configuring textures");
                         self.current_state = Anchor::Settings;
+                        ctx.open_url(egui::OpenUrl::same_tab(format!("#{:?}", Anchor::Settings)));
                     }
                 }
                 Anchor::Game => {
@@ -103,6 +126,7 @@ impl eframe::App for App {
                         #[cfg(target_arch = "wasm32")]
                         log("back to main menu");
                         self.current_state = Anchor::Menu;
+                        ctx.open_url(egui::OpenUrl::same_tab(format!("#{:?}", Anchor::Menu)));
                     }
                     ui.add(&mut self.hand);
                     ui.add(&mut self.stack);
@@ -130,6 +154,7 @@ impl eframe::App for App {
                         #[cfg(target_arch = "wasm32")]
                         log("back to main menu");
                         self.current_state = Anchor::Menu;
+                        ctx.open_url(egui::OpenUrl::same_tab(format!("#{:?}", Anchor::Menu)));
                     }
                     let suit_area = egui::Area::new(egui::Id::new("suit"))
                         .sense(egui::Sense::click())
