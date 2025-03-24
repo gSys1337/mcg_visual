@@ -50,7 +50,7 @@ impl Default for HandLayout {
 impl egui::Widget for &mut HandLayout {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         egui::Area::new(ui.next_auto_id())
-            .current_pos(self.pos)
+            //.current_pos(self.pos)
             .sense(egui::Sense::empty())
             .show(ui.ctx(), |ui| {
                 frame::Frame::new()

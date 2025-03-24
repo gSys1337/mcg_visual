@@ -10,8 +10,22 @@ pub mod vfx;
 use crate::example;
 pub use crate::game::card::Card;
 
+pub struct State {
+    players: usize,
+    player_cards: Vec<vfx::HandLayout>,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self {
+            players: 2,
+            player_cards: vec![Default::default(), Default::default()],
+        }
+    }
+}
+
 pub struct App {
-    current_state: Anchor,
+    current_state: State,
     cards: Vec<Box<dyn Card>>,
     next_suit: usize,
     next_rank: usize,
@@ -37,7 +51,7 @@ impl App {
             stack.add_card(Box::new(example::ConventionalCard::new_random()));
         }
         Self {
-            current_state: Anchor::Menu,
+            current_state: Default::default(),
             cards,
             next_suit: Default::default(),
             next_rank: Default::default(),
@@ -58,7 +72,7 @@ enum Anchor {
 
 impl Anchor {
     fn from_str(s: &str) -> Option<Self> {
-        match s { 
+        match s {
             "Menu" => Some(Anchor::Menu),
             "Game" => Some(Anchor::Game),
             "Settings" => Some(Anchor::Settings),
@@ -72,7 +86,6 @@ use egui::FontId;
 use egui::TextStyle::*;
 use std::collections::BTreeMap;
 
-#[cfg(target_arch = "wasm32")]
 impl eframe::App for App {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -95,28 +108,47 @@ impl eframe::App for App {
                 Direction::TopDown,
                 emath::Align::Center,
             );
+            #[cfg(target_arch = "wasm32")]
             let window = _frame
                 .info()
                 .web_info
                 .location
                 .hash
                 .strip_prefix('#')
-                .and_then(|s| {Anchor::from_str(s)})
+                .and_then(|s| Anchor::from_str(s))
                 .unwrap_or(Anchor::Menu);
+            #[cfg(target_arch = "wasm32")]
             ui.with_layout(layout, |ui| match window {
                 Anchor::Menu => {
                     let start = egui::Button::new("Start Game");
                     if ui.add(start).clicked() {
                         #[cfg(target_arch = "wasm32")]
                         log("game started");
-                        self.current_state = Anchor::Game;
+                        let delta = self.current_state.player_cards.len() as isize
+                            - self.current_state.players as isize;
+                        let f = if delta >= 0 {
+                            |v: &mut Vec<vfx::HandLayout>| {
+                                v.pop();
+                            }
+                        } else {
+                            |v: &mut Vec<vfx::HandLayout>| v.push(vfx::HandLayout::default())
+                        };
+                        #[cfg(target_arch = "wasm32")]
+                        log(format!(
+                            "len: {}\nplayers: {}\ndelta: {}",
+                            self.current_state.player_cards.len(),
+                            self.current_state.players,
+                            delta
+                        )
+                        .as_str());
+                        let x = 0..delta.abs();
+                        x.for_each(|_| f(&mut self.current_state.player_cards));
                         ctx.open_url(egui::OpenUrl::same_tab(format!("#{:?}", Anchor::Game)));
                     };
                     let settings = egui::Button::new("Settings");
                     if ui.add(settings).clicked() {
                         #[cfg(target_arch = "wasm32")]
                         log("configuring textures");
-                        self.current_state = Anchor::Settings;
                         ctx.open_url(egui::OpenUrl::same_tab(format!("#{:?}", Anchor::Settings)));
                     }
                 }
@@ -125,11 +157,15 @@ impl eframe::App for App {
                     if ui.add(back).clicked() {
                         #[cfg(target_arch = "wasm32")]
                         log("back to main menu");
-                        self.current_state = Anchor::Menu;
                         ctx.open_url(egui::OpenUrl::same_tab(format!("#{:?}", Anchor::Menu)));
                     }
-                    ui.add(&mut self.hand);
-                    ui.add(&mut self.stack);
+                    // ui.add(&mut self.hand);
+                    // ui.add(&mut self.stack);
+                    // ui.advance_cursor_after_rect(egui::Rect::from_min_size(egui::pos2(0.0, 0.0), egui::vec2(100000.0, 1000.0)));
+                    for player in self.current_state.player_cards.iter_mut() {
+                        let r = ui.add(player);
+                        ui.advance_cursor_after_rect(r.rect);
+                    }
                     for (idx, card) in self.cards.iter_mut().enumerate() {
                         let ir = egui::Area::new(egui::Id::new(idx))
                             .sense(egui::Sense::click_and_drag())
@@ -153,7 +189,6 @@ impl eframe::App for App {
                     if ui.add(back).clicked() {
                         #[cfg(target_arch = "wasm32")]
                         log("back to main menu");
-                        self.current_state = Anchor::Menu;
                         ctx.open_url(egui::OpenUrl::same_tab(format!("#{:?}", Anchor::Menu)));
                     }
                     let suit_area = egui::Area::new(egui::Id::new("suit"))
@@ -196,6 +231,27 @@ impl eframe::App for App {
                         self.hand
                             .add_card(Box::new(example::ConventionalCard::new_random()));
                     }
+                    let player_area = egui::Area::new(egui::Id::new("player"))
+                        .sense(egui::Sense::click())
+                        .current_pos(ui.next_widget_position());
+                    let ir = player_area.show(ctx, |ui| {
+                        ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                            ui.label("# Players");
+                            let drag = egui::DragValue::new(&mut self.current_state.players);
+                            ui.add(drag);
+                            let dec = egui::Button::new("-").min_size(egui::vec2(50.0, 0.0));
+                            if ui.add(dec).clicked() {
+                                self.current_state.players =
+                                    self.current_state.players.saturating_sub(1);
+                            }
+                            let inc = egui::Button::new("+").min_size(egui::vec2(50.0, 0.0));
+                            if ui.add(inc).clicked() {
+                                self.current_state.players =
+                                    self.current_state.players.saturating_add(1);
+                            }
+                        })
+                    });
+                    ui.advance_cursor_after_rect(ir.response.rect);
                 }
             });
         });
