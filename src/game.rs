@@ -2,7 +2,7 @@ use eframe::emath;
 use egui::{Context, Direction};
 use rand::Rng;
 
-#[cfg(target_arch = "wasm32")]
+// #[cfg(target_arch = "wasm32")]
 #[allow(unused_imports)]
 use crate::log;
 pub mod card;
@@ -17,9 +17,13 @@ pub struct State {
 
 impl Default for State {
     fn default() -> Self {
+        let mut first: vfx::HandLayout = Default::default();
+        for _ in 0..10 {
+            first.add_card(Box::new(example::ConventionalCard::new_random()));
+        }
         Self {
             players: 2,
-            player_cards: vec![Default::default(), Default::default()],
+            player_cards: vec![first, Default::default()],
         }
     }
 }
@@ -108,7 +112,7 @@ impl eframe::App for App {
                 Direction::TopDown,
                 emath::Align::Center,
             );
-            #[cfg(target_arch = "wasm32")]
+            // #[cfg(target_arch = "wasm32")]
             let window = _frame
                 .info()
                 .web_info
@@ -117,12 +121,12 @@ impl eframe::App for App {
                 .strip_prefix('#')
                 .and_then(|s| Anchor::from_str(s))
                 .unwrap_or(Anchor::Menu);
-            #[cfg(target_arch = "wasm32")]
+            // #[cfg(target_arch = "wasm32")]
             ui.with_layout(layout, |ui| match window {
                 Anchor::Menu => {
                     let start = egui::Button::new("Start Game");
                     if ui.add(start).clicked() {
-                        #[cfg(target_arch = "wasm32")]
+                        // #[cfg(target_arch = "wasm32")]
                         log("game started");
                         let delta = self.current_state.player_cards.len() as isize
                             - self.current_state.players as isize;
@@ -133,7 +137,7 @@ impl eframe::App for App {
                         } else {
                             |v: &mut Vec<vfx::HandLayout>| v.push(vfx::HandLayout::default())
                         };
-                        #[cfg(target_arch = "wasm32")]
+                        // #[cfg(target_arch = "wasm32")]
                         log(format!(
                             "len: {}\nplayers: {}\ndelta: {}",
                             self.current_state.player_cards.len(),
@@ -147,7 +151,7 @@ impl eframe::App for App {
                     };
                     let settings = egui::Button::new("Settings");
                     if ui.add(settings).clicked() {
-                        #[cfg(target_arch = "wasm32")]
+                        // #[cfg(target_arch = "wasm32")]
                         log("configuring textures");
                         ctx.open_url(egui::OpenUrl::same_tab(format!("#{:?}", Anchor::Settings)));
                     }
@@ -155,7 +159,7 @@ impl eframe::App for App {
                 Anchor::Game => {
                     let back = egui::Button::new("Back");
                     if ui.add(back).clicked() {
-                        #[cfg(target_arch = "wasm32")]
+                        // #[cfg(target_arch = "wasm32")]
                         log("back to main menu");
                         ctx.open_url(egui::OpenUrl::same_tab(format!("#{:?}", Anchor::Menu)));
                     }
@@ -187,7 +191,7 @@ impl eframe::App for App {
                     self.screen_width = ctx.available_rect().width();
                     self.screen_height = ctx.available_rect().height();
                     if ui.add(back).clicked() {
-                        #[cfg(target_arch = "wasm32")]
+                        // #[cfg(target_arch = "wasm32")]
                         log("back to main menu");
                         ctx.open_url(egui::OpenUrl::same_tab(format!("#{:?}", Anchor::Menu)));
                     }
@@ -224,7 +228,7 @@ impl eframe::App for App {
                             pos: egui::Pos2::from((x, y)),
                         };
                         self.cards.push(Box::new(card));
-                        #[cfg(target_arch = "wasm32")]
+                        // #[cfg(target_arch = "wasm32")]
                         log(format!("added card @ ({}|{})", x, y).as_str());
                     }
                     if ui.button("Random").clicked() {

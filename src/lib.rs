@@ -2,12 +2,12 @@ mod utils;
 pub mod game;
 pub mod example;
 
-#[cfg(target_arch="wasm32")]
+// #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
-#[cfg(target_arch="wasm32")]
+// #[cfg(target_arch = "wasm32")]
 use eframe::WebRunner;
 
-#[cfg(target_arch="wasm32")]
+// #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 extern "C" {
     fn alert(s: &str);
@@ -16,7 +16,7 @@ extern "C" {
 
 }
 
-#[cfg(target_arch="wasm32")]
+// #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn start(canvas: web_sys::HtmlCanvasElement) -> Result<(), JsValue> {
     console_error_panic_hook::set_once();

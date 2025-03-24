@@ -1,5 +1,5 @@
 use egui::Sense;
-#[cfg(target_arch = "wasm32")]
+// #[cfg(target_arch = "wasm32")]
 #[allow(unused_imports)]
 use crate::log;
 
