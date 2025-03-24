@@ -4,6 +4,7 @@ use egui::Sense;
 use crate::log;
 
 pub trait Card {
+    // TODO replace img_path(...) with img(...)
     fn img_path(&self) -> String;
     fn pos(&self) -> egui::Pos2;
     fn translate(&mut self, amt: egui::Vec2);

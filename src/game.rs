@@ -9,21 +9,22 @@ pub mod card;
 pub mod vfx;
 use crate::example;
 pub use crate::game::card::Card;
+pub use vfx::Field;
 
 pub struct State {
     players: usize,
-    player_cards: Vec<vfx::HandLayout>,
+    player_cards: Vec<Box<dyn Field>>,
 }
 
 impl Default for State {
     fn default() -> Self {
-        let mut first: vfx::HandLayout = Default::default();
+        let mut first: example::HandLayout = Default::default();
         for _ in 0..10 {
             first.add_card(Box::new(example::ConventionalCard::new_random()));
         }
         Self {
             players: 2,
-            player_cards: vec![first, Default::default()],
+            player_cards: vec![Box::new(first), Box::new(example::HandLayout::default())],
         }
     }
 }
@@ -35,8 +36,8 @@ pub struct App {
     next_rank: usize,
     screen_width: f32,
     screen_height: f32,
-    hand: vfx::HandLayout,
-    stack: vfx::Stack,
+    hand: example::HandLayout,
+    stack: Box<dyn Field>,
 }
 
 impl App {
@@ -45,15 +46,17 @@ impl App {
         crate::utils::set_panic_hook();
         egui_extras::install_image_loaders(&cc.egui_ctx);
         let mut cards: Vec<Box<dyn Card>> = Vec::new();
-        // cards.push(Box::new(example::Backside::new()));
-        let mut hand: vfx::HandLayout = Default::default();
+        cards.push(Box::new(example::ConventionalCard::new_random()));
+        let mut hand: example::HandLayout = Default::default();
         for _ in 0..10 {
             hand.add_card(Box::new(example::ConventionalCard::new_random()));
         }
-        let mut stack: vfx::Stack = Default::default();
+        let mut stack: example::Stack = Default::default();
         for _ in 0..10 {
             stack.add_card(Box::new(example::ConventionalCard::new_random()));
         }
+        stack.pos.x += 400.0;
+        let stack: Box<dyn Field> = Box::new(stack);
         Self {
             current_state: Default::default(),
             cards,
@@ -94,6 +97,7 @@ impl eframe::App for App {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             let size = 30.0;
+            // TODO move text size into settings
             let text_styles: BTreeMap<_, _> = [
                 (Heading, FontId::new(size, Proportional)),
                 (Name("Heading2".into()), FontId::new(size, Proportional)),
@@ -122,6 +126,9 @@ impl eframe::App for App {
                 .and_then(|s| Anchor::from_str(s))
                 .unwrap_or(Anchor::Menu);
             // #[cfg(target_arch = "wasm32")]
+            /* TODO create window trait? in order to move this code to different files
+                and more important: give the user of this library a way to customise
+            */
             ui.with_layout(layout, |ui| match window {
                 Anchor::Menu => {
                     let start = egui::Button::new("Start Game");
@@ -131,11 +138,13 @@ impl eframe::App for App {
                         let delta = self.current_state.player_cards.len() as isize
                             - self.current_state.players as isize;
                         let f = if delta >= 0 {
-                            |v: &mut Vec<vfx::HandLayout>| {
+                            |v: &mut Vec<Box<dyn Field>>| {
                                 v.pop();
                             }
                         } else {
-                            |v: &mut Vec<vfx::HandLayout>| v.push(vfx::HandLayout::default())
+                            |v: &mut Vec<Box<dyn Field>>| {
+                                v.push(Box::new(example::HandLayout::default()))
+                            }
                         };
                         // #[cfg(target_arch = "wasm32")]
                         log(format!(
@@ -147,6 +156,14 @@ impl eframe::App for App {
                         .as_str());
                         let x = 0..delta.abs();
                         x.for_each(|_| f(&mut self.current_state.player_cards));
+                        self.current_state
+                            .player_cards
+                            .iter_mut()
+                            .enumerate()
+                            .for_each(|(i, hand)| {
+                                let pos = egui::pos2(70.0, 170.0 * (i + 1) as f32);
+                                hand.set_pos(pos);
+                            });
                         ctx.open_url(egui::OpenUrl::same_tab(format!("#{:?}", Anchor::Game)));
                     };
                     let settings = egui::Button::new("Settings");
@@ -164,12 +181,12 @@ impl eframe::App for App {
                         ctx.open_url(egui::OpenUrl::same_tab(format!("#{:?}", Anchor::Menu)));
                     }
                     // ui.add(&mut self.hand);
-                    // ui.add(&mut self.stack);
                     // ui.advance_cursor_after_rect(egui::Rect::from_min_size(egui::pos2(0.0, 0.0), egui::vec2(100000.0, 1000.0)));
                     for player in self.current_state.player_cards.iter_mut() {
-                        let r = ui.add(player);
+                        let r = ui.add(&**player);
                         ui.advance_cursor_after_rect(r.rect);
                     }
+                    ui.add(&*self.stack);
                     for (idx, card) in self.cards.iter_mut().enumerate() {
                         let ir = egui::Area::new(egui::Id::new(idx))
                             .sense(egui::Sense::click_and_drag())

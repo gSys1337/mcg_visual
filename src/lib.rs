@@ -34,3 +34,7 @@ pub fn start(canvas: web_sys::HtmlCanvasElement) -> Result<(), JsValue> {
     Ok(())
 }
 
+/* TODO implement right-click with popup when this
+    https://github.com/emilk/egui/blob/master/crates/egui/src/containers/popup.rs
+    gets into a proper egui release
+*/
