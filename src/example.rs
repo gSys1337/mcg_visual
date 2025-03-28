@@ -1,10 +1,10 @@
-use egui;
-use std::fmt;
-use std::ops::Add;
-use egui::frame;
-use rand::Rng;
 use crate::game;
 use crate::game::{card, Field};
+use egui;
+use egui::frame;
+use rand::Rng;
+use std::fmt;
+use std::ops::Add;
 // #[cfg(target_arch = "wasm32")]
 #[allow(unused_imports)]
 use crate::log;
@@ -24,7 +24,7 @@ impl ConventionalCard {
     pub fn new_random() -> Self {
         let mut rng = rand::thread_rng();
         let rank: Rank = rng.gen_range(0..Rank::len()).into();
-        let suit:Suit = rng.gen_range(0..Suit::len()).into();
+        let suit: Suit = rng.gen_range(0..Suit::len()).into();
         let x = rng.gen_range(0..1000) as f32;
         let y = rng.gen_range(0..1000) as f32;
         let pos = egui::Pos2::new(x, y);
@@ -43,6 +43,10 @@ impl card::Card for ConventionalCard {
 
     fn pos(&self) -> egui::Pos2 {
         self.pos
+    }
+
+    fn set_pos(&mut self, pos: egui::Pos2) {
+        self.pos = pos;
     }
 
     fn translate(&mut self, amt: egui::Vec2) {
@@ -264,6 +268,8 @@ impl card::Card for Backside {
         egui::pos2(500.0, 500.0)
     }
 
+    fn set_pos(&mut self, _pos: egui::Pos2) {}
+
     fn translate(&mut self, _amt: egui::Vec2) {}
 }
 
@@ -330,17 +336,16 @@ impl Field for Stack {
                                 ui.set_min_size(self.size);
                                 for (idx, card) in self.cards.iter().enumerate() {
                                     let card_pos = next_pos.add(self.card_pos(idx));
-                                    egui::Area::new(ui.next_auto_id())
-                                        .order(egui::Order::Foreground)
-                                        .sense(egui::Sense::all())
-                                        .current_pos(card_pos)
-                                        .show(ui.ctx(), |ui| {
-                                            ui.add(&**card);
-                                        });
+                                    card.draw(
+                                        ui,
+                                        Some(card_pos),
+                                        Some(egui::Sense::all()),
+                                        Some(egui::Order::Foreground),
+                                    );
                                 }
                             },
                         )
-                            .response
+                        .response
                     })
                     .inner
             })
@@ -426,10 +431,10 @@ impl Field for HandLayout {
                                     let right = ui.max_rect().right();
                                     let selector = self.cards.len() as f32
                                         * (pointer
-                                        .latest_pos()
-                                        .unwrap_or_else(|| egui::pos2(left, 0.0))
-                                        .x
-                                        - left)
+                                            .latest_pos()
+                                            .unwrap_or_else(|| egui::pos2(left, 0.0))
+                                            .x
+                                            - left)
                                         / (right - left);
                                     selected = Some(selector as usize);
                                 }
@@ -438,13 +443,12 @@ impl Field for HandLayout {
                                     if selected.is_some() && idx == selected.unwrap() {
                                         continue;
                                     }
-                                    egui::Area::new(ui.next_auto_id())
-                                        .order(egui::Order::Foreground)
-                                        .sense(egui::Sense::all())
-                                        .current_pos(card_pos)
-                                        .show(ui.ctx(), |ui| {
-                                            ui.add(&**card);
-                                        });
+                                    card.draw(
+                                        ui,
+                                        Some(card_pos),
+                                        Some(egui::Sense::all()),
+                                        Some(egui::Order::Foreground),
+                                    );
                                 }
                                 if selected.is_some() {
                                     self.cards.get(selected.unwrap()).map(|card| {
@@ -475,7 +479,7 @@ impl Field for HandLayout {
                                 }
                             },
                         )
-                            .response
+                        .response
                     })
                     .inner
             })

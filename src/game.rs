@@ -187,16 +187,9 @@ impl eframe::App for App {
                         ui.advance_cursor_after_rect(r.rect);
                     }
                     ui.add(&*self.stack);
-                    for (idx, card) in self.cards.iter_mut().enumerate() {
-                        let ir = egui::Area::new(egui::Id::new(idx))
-                            .sense(egui::Sense::click_and_drag())
-                            .current_pos(card.pos())
-                            .show(&ctx, |ui| {
-                                // important to use ``&**card`` because rust gets it somehow wrong ¯\_(ツ)_/¯
-                                // i assume this is an "issue" with deref coercion because
-                                // Rust can include `*`s at compile-time but no `&`
-                                ui.add(&**card)
-                            });
+                    for card in self.cards.iter_mut() {
+                        let sense = egui::Sense::click_and_drag();
+                        let ir = card.draw(ui, None, Some(sense), None);
                         let r = ir.inner;
                         if r.is_pointer_button_down_on() {
                             card.translate(r.drag_delta());
