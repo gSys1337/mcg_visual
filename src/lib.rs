@@ -13,7 +13,6 @@ extern "C" {
     fn alert(s: &str);
     #[wasm_bindgen(js_namespace = console)]
     pub fn log(s: &str);
-
 }
 
 // #[cfg(target_arch = "wasm32")]

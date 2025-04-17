@@ -19,9 +19,9 @@ wasm-bindgen = "0.2.100"
 # code size when deploying.
 console_error_panic_hook = { version = "0.1.7", optional = true }
 web-sys = { version = "0.3.77", features = ["HtmlCanvasElement"] }
-egui = "0.31.0"
-eframe = "0.31.0"
-egui_extras = { version = "0.31.0", features = ["all_loaders", "image", "svg", "file"] }
+egui = "0.31.1"
+eframe = "0.31.1"
+egui_extras = { version = "0.31.1", features = ["all_loaders", "image", "svg", "file"] }
 wasm-bindgen-futures = "0.4.50"
 rand = { version = "<0.9.0", features = ["small_rng"] }
 # rand = { version = "0.9.0", features = ["small_rng"] }

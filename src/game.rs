@@ -10,6 +10,7 @@ pub mod vfx;
 use crate::example;
 pub use crate::game::card::Card;
 pub use vfx::Field;
+use crate::game::card::Drawable;
 
 pub struct State {
     players: usize,
@@ -77,13 +78,15 @@ enum Anchor {
     Settings,
 }
 
-impl Anchor {
-    fn from_str(s: &str) -> Option<Self> {
+impl FromStr for Anchor {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "Menu" => Some(Anchor::Menu),
-            "Game" => Some(Anchor::Game),
-            "Settings" => Some(Anchor::Settings),
-            _ => None,
+            "Menu" => Ok(Anchor::Menu),
+            "Game" => Ok(Anchor::Game),
+            "Settings" => Ok(Anchor::Settings),
+            _ => Err("Provided &str doesn't look like any type of Anchor"),
         }
     }
 }
@@ -92,6 +95,7 @@ use egui::FontFamily::Proportional;
 use egui::FontId;
 use egui::TextStyle::*;
 use std::collections::BTreeMap;
+use std::str::FromStr;
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
@@ -123,7 +127,7 @@ impl eframe::App for App {
                 .location
                 .hash
                 .strip_prefix('#')
-                .and_then(|s| Anchor::from_str(s))
+                .and_then(|s| s.parse::<Anchor>().ok())
                 .unwrap_or(Anchor::Menu);
             // #[cfg(target_arch = "wasm32")]
             /* TODO create window trait? in order to move this code to different files
@@ -183,13 +187,17 @@ impl eframe::App for App {
                     // ui.add(&mut self.hand);
                     // ui.advance_cursor_after_rect(egui::Rect::from_min_size(egui::pos2(0.0, 0.0), egui::vec2(100000.0, 1000.0)));
                     for player in self.current_state.player_cards.iter_mut() {
-                        let r = ui.add(&**player);
-                        ui.advance_cursor_after_rect(r.rect);
+                        // let r = ui.add(&**player);
+                        // ui.advance_cursor_after_rect(r.rect);
+                        player.draw(ui, None, None, None, false);
+                        // player.draw(ui, None, Some(egui::Sense::empty()), None, false);
                     }
-                    ui.add(&*self.stack);
+                    // ui.add(&*self.stack);
+                    self.stack.draw(ui, None, Some(egui::Sense::empty()), None, true);
                     for card in self.cards.iter_mut() {
                         let sense = egui::Sense::click_and_drag();
-                        let ir = card.draw(ui, None, Some(sense), None);
+                        // TODO investigate bug that all cards share the same egui::ID
+                        let ir = card.draw(ui, None, Some(sense), None, true);
                         let r = ir.inner;
                         if r.is_pointer_button_down_on() {
                             card.translate(r.drag_delta());
