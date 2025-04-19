@@ -8,9 +8,9 @@ use std::cell::RefCell;
 use crate::log;
 pub mod card;
 pub mod vfx;
+use crate::example;
 pub use crate::game::card::Card;
 use crate::game::card::{DirectoryCardType, Drawable};
-use crate::example;
 pub use vfx::Field;
 
 pub struct State {

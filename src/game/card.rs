@@ -1,12 +1,12 @@
-use std::cell::RefCell;
-use egui::Sense;
-use std::rc::Rc;
-use wasm_bindgen_futures::js_sys::Array;
-use wasm_bindgen_futures::{spawn_local, JsFuture};
 // #[cfg(target_arch = "wasm32")]
 #[allow(unused_imports)]
 use crate::log;
 use crate::openDirectoryPicker;
+use egui::Sense;
+use std::cell::RefCell;
+use std::rc::Rc;
+use wasm_bindgen_futures::js_sys::Array;
+use wasm_bindgen_futures::{spawn_local, JsFuture};
 
 #[derive(Clone)]
 pub struct DirectoryCardType {
@@ -21,7 +21,10 @@ impl DirectoryCardType {
             let x = JsFuture::from(openDirectoryPicker()).await;
             match x {
                 Ok(x) => {
-                    let mut card_type = Self {path: String::new(), card_list: Vec::new() };
+                    let mut card_type = Self {
+                        path: String::new(),
+                        card_list: Vec::new(),
+                    };
                     let arr: Array = x.into();
                     for file in arr {
                         let thing: Array = Array::from(&file);
@@ -34,7 +37,7 @@ impl DirectoryCardType {
             }
         });
     }
-    pub fn all(&self) -> impl IntoIterator<Item=String> {
+    pub fn all(&self) -> impl IntoIterator<Item = String> {
         self.card_list.clone()
     }
 }

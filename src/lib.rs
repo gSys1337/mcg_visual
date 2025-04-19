@@ -1,11 +1,11 @@
-mod utils;
-pub mod game;
 pub mod example;
+pub mod game;
+mod utils;
 
 // #[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
-// #[cfg(target_arch = "wasm32")]
 use eframe::WebRunner;
+// #[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::js_sys::Array;
 use web_sys::js_sys::Promise;
 

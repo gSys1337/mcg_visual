@@ -1,14 +1,14 @@
 use crate::game;
 use crate::game::{card, Field};
-use egui;
-use egui::frame;
-use rand::Rng;
-use std::fmt;
-use std::ops::Add;
 // #[cfg(target_arch = "wasm32")]
 #[allow(unused_imports)]
 use crate::log;
+use egui;
+use egui::frame;
 use game::card::Drawable;
+use rand::Rng;
+use std::fmt;
+use std::ops::Add;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub struct ConventionalCard {
@@ -338,7 +338,7 @@ impl Field for Stack {
                                 Some(card_pos),
                                 Some(egui::Sense::all()),
                                 Some(egui::Order::Foreground),
-                                true
+                                true,
                             );
                         }
                     },
@@ -443,7 +443,7 @@ impl Field for HandLayout {
                                 Some(card_pos),
                                 Some(egui::Sense::all()),
                                 Some(egui::Order::Foreground),
-                                true
+                                true,
                             );
                         }
                         if selected.is_some() {

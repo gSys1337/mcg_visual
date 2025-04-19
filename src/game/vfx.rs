@@ -8,7 +8,6 @@ pub trait Field {
 
 impl egui::Widget for &dyn Field {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
-        
         self.ui(ui)
     }
 }
