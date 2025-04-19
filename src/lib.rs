@@ -6,6 +6,8 @@ pub mod example;
 use wasm_bindgen::prelude::*;
 // #[cfg(target_arch = "wasm32")]
 use eframe::WebRunner;
+use wasm_bindgen_futures::js_sys::Array;
+use web_sys::js_sys::Promise;
 
 // #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
@@ -13,6 +15,8 @@ extern "C" {
     fn alert(s: &str);
     #[wasm_bindgen(js_namespace = console)]
     pub fn log(s: &str);
+    pub fn handleDirectorySelection() -> Array;
+    pub fn openDirectoryPicker() -> Promise;
 }
 
 // #[cfg(target_arch = "wasm32")]
