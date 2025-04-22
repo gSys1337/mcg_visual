@@ -8,29 +8,49 @@ use std::rc::Rc;
 use wasm_bindgen_futures::js_sys::Array;
 use wasm_bindgen_futures::{spawn_local, JsFuture};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DirectoryCardType {
     path: String,
     card_list: Vec<String>,
 }
 
 impl DirectoryCardType {
+    /// It's assumed the image URL is inside servers /media directory and the
+    /// type order corresponds to the lexicographical.
+    /// 
+    /// For real file upload you need to extend the simple python http server to accept uploads.
+    /// Does pythons simple https server already accept POST requests?
     pub fn new_from_selection(holder: Rc<RefCell<Option<DirectoryCardType>>>) {
         let type_rc = Rc::clone(&holder);
         spawn_local(async move {
-            let x = JsFuture::from(openDirectoryPicker()).await;
-            match x {
-                Ok(x) => {
+            let response = JsFuture::from(openDirectoryPicker()).await;
+            match response {
+                Ok(file_info_array) => {
                     let mut card_type = Self {
                         path: String::new(),
                         card_list: Vec::new(),
                     };
-                    let arr: Array = x.into();
-                    for file in arr {
-                        let thing: Array = Array::from(&file);
-                        let t: Vec<String> = thing.iter().map(|x| x.as_string().unwrap()).collect();
-                        card_type.card_list.push(t.get(0).unwrap().clone());
+                    let mut path_set = false;
+                    let file_info_array: Array = file_info_array.into();
+                    for file_info in file_info_array {
+                        let file_info: Array = Array::from(&file_info);
+                        let file_info: Vec<String> =
+                            file_info.iter().map(|x| x.as_string().unwrap().clone()).collect();
+                        let file_name = file_info.get(0).expect("Every file has a name!").clone();
+                        let path = file_info.get(1).expect("Every file has a path!").clone();
+                        let file_type = file_info.get(2).clone();
+                        if !path_set {
+                            let path = path.strip_suffix(format!("/{file_name}").as_str()).unwrap().to_string();
+                            card_type.path = path;
+                            path_set = true;
+                        }
+                        if let Some(file_type) = file_type  {
+                            if file_type.starts_with("image") {
+                                card_type.card_list.push(file_name);
+                            }
+                        }
                     }
+                    card_type.card_list.sort();
                     type_rc.borrow_mut().replace(card_type);
                 }
                 Err(_) => {}

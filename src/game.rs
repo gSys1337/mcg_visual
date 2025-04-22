@@ -142,19 +142,8 @@ impl eframe::App for App {
                     Anchor::Menu => {
                         let start = egui::Button::new("Start Game");
                         if ui.add(start).clicked() && self.card_types.borrow().is_some() {
-                            for card in self
-                                .card_types
-                                .borrow()
-                                .clone()
-                                .unwrap()
-                                .all()
-                                .into_iter()
-                                .enumerate()
-                            {
-                                log(format!("Card {}: {}", card.0, card.1).as_str());
-                            }
                             log(
-                                format!("Strong count: {}", Rc::strong_count(&self.card_types))
+                                format!("Card Type: {:?}", self.card_types.borrow())
                                     .as_str(),
                             );
                             // #[cfg(target_arch = "wasm32")]
