@@ -9,56 +9,66 @@ use wasm_bindgen_futures::js_sys::Array;
 use wasm_bindgen_futures::{spawn_local, JsFuture};
 
 #[derive(Clone, Debug)]
+#[allow(non_snake_case)]
 pub struct DirectoryCardType {
     path: String,
     card_list: Vec<String>,
+    T: usize,
 }
 
 impl DirectoryCardType {
     /// It's assumed the image URL is inside servers /media directory and the
     /// type order corresponds to the lexicographical.
-    /// 
+    ///
     /// For real file upload you need to extend the simple python http server to accept uploads.
     /// Does pythons simple https server already accept POST requests?
     pub fn new_from_selection(holder: Rc<RefCell<Option<DirectoryCardType>>>) {
         let type_rc = Rc::clone(&holder);
         spawn_local(async move {
             let response = JsFuture::from(openDirectoryPicker()).await;
-            match response {
-                Ok(file_info_array) => {
-                    let mut card_type = Self {
-                        path: String::new(),
-                        card_list: Vec::new(),
-                    };
-                    let mut path_set = false;
-                    let file_info_array: Array = file_info_array.into();
-                    for file_info in file_info_array {
-                        let file_info: Array = Array::from(&file_info);
-                        let file_info: Vec<String> =
-                            file_info.iter().map(|x| x.as_string().unwrap().clone()).collect();
-                        let file_name = file_info.get(0).expect("Every file has a name!").clone();
-                        let path = file_info.get(1).expect("Every file has a path!").clone();
-                        let file_type = file_info.get(2).clone();
-                        if !path_set {
-                            let path = path.strip_suffix(format!("/{file_name}").as_str()).unwrap().to_string();
-                            card_type.path = path;
-                            path_set = true;
-                        }
-                        if let Some(file_type) = file_type  {
-                            if file_type.starts_with("image") {
-                                card_type.card_list.push(file_name);
-                            }
+            if let Ok(file_info_array) = response {
+                let mut card_type = Self {
+                    path: String::new(),
+                    card_list: Vec::new(),
+                    T: 0usize,
+                };
+                let mut path_set = false;
+                let file_info_array: Array = file_info_array.into();
+                for file_info in file_info_array {
+                    let file_info: Array = Array::from(&file_info);
+                    let file_info: Vec<String> = file_info
+                        .iter()
+                        .map(|x| x.as_string().unwrap().clone())
+                        .collect();
+                    let file_name = file_info.first().expect("Every file has a name!").clone();
+                    let path = file_info.get(1).expect("Every file has a path!").clone();
+                    let file_type = file_info.get(2);
+                    if !path_set {
+                        let path = path
+                            .strip_suffix(format!("/{file_name}").as_str())
+                            .unwrap()
+                            .to_string();
+                        card_type.path = path;
+                        path_set = true;
+                    }
+                    if let Some(file_type) = file_type {
+                        if file_type.starts_with("image") {
+                            card_type.card_list.push(file_name);
                         }
                     }
-                    card_type.card_list.sort();
-                    type_rc.borrow_mut().replace(card_type);
                 }
-                Err(_) => {}
+                card_type.card_list.sort();
+                card_type.T = card_type.card_list.len();
+                type_rc.borrow_mut().replace(card_type);
             }
         });
     }
     pub fn all(&self) -> impl IntoIterator<Item = String> {
         self.card_list.clone()
+    }
+    #[allow(non_snake_case)]
+    pub fn T(&self) -> usize {
+        self.T
     }
 }
 
@@ -135,8 +145,43 @@ impl egui::Widget for &dyn Card {
         let path = self.img_path();
         let img = egui::Image::new(path)
             .show_loading_spinner(true)
+            .max_size(egui::vec2(100.0, 144.0))
             .fit_to_original_size(1.0)
             .sense(Sense::click_and_drag());
         ui.add(img)
+    }
+}
+
+pub struct SimpleCard<T = DirectoryCardType> {
+    all: Rc<T>,
+    t: usize,
+}
+
+impl SimpleCard<DirectoryCardType> {
+    pub fn new(t: usize, all: Rc<DirectoryCardType>) -> SimpleCard<DirectoryCardType> {
+        assert!(t < all.T);
+        Self { all, t }
+    }
+}
+
+impl Card for SimpleCard<DirectoryCardType> {
+    fn img_path(&self) -> String {
+        format!(
+            "http://127.0.0.1:8080/media/{folder}/{card}",
+            folder = self.all.path,
+            card = self.all.card_list[self.t]
+        )
+    }
+
+    fn pos(&self) -> egui::Pos2 {
+        todo!()
+    }
+
+    fn set_pos(&mut self, pos: egui::Pos2) {
+        todo!()
+    }
+
+    fn translate(&mut self, amt: egui::Vec2) {
+        todo!()
     }
 }

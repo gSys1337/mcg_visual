@@ -142,10 +142,11 @@ impl eframe::App for App {
                     Anchor::Menu => {
                         let start = egui::Button::new("Start Game");
                         if ui.add(start).clicked() && self.card_types.borrow().is_some() {
-                            log(
-                                format!("Card Type: {:?}", self.card_types.borrow())
-                                    .as_str(),
-                            );
+                            log(format!(
+                                "Card Type: {:?}",
+                                self.card_types.borrow().as_ref().unwrap()
+                            )
+                            .as_str());
                             // #[cfg(target_arch = "wasm32")]
                             log("game started");
                             let delta = self.current_state.player_cards.len() as isize
@@ -178,6 +179,17 @@ impl eframe::App for App {
                                     hand.set_pos(pos);
                                 });
                             ctx.open_url(egui::OpenUrl::same_tab(format!("#{:?}", Anchor::Game)));
+                            if self.current_state.players >= 2 {
+                                let mut field: example::HandLayout = Default::default();
+                                let card_type = Rc::new(self.card_types.borrow().clone().unwrap());
+                                for t in 0..10usize {
+                                    field.add_card(Box::new(card::SimpleCard::new(
+                                        t,
+                                        Rc::clone(&card_type),
+                                    )));
+                                }
+                                self.current_state.player_cards[1] = Box::new(field);
+                            }
                         };
                         let settings = egui::Button::new("Settings");
                         if ui.add(settings).clicked() {

@@ -447,7 +447,7 @@ impl Field for HandLayout {
                             );
                         }
                         if selected.is_some() {
-                            self.cards.get(selected.unwrap()).map(|card| {
+                            if let Some(card) = self.cards.get(selected.unwrap()) {
                                 let card_pos = next_pos
                                     .add(self.card_pos(selected.unwrap()))
                                     .add(egui::vec2(0.0, -10.0));
@@ -465,7 +465,7 @@ impl Field for HandLayout {
                                                 });
                                             });
                                     });
-                            });
+                            }
                         }
                     },
                 )
