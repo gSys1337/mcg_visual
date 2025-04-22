@@ -55,19 +55,12 @@ impl card::Card for ConventionalCard {
     }
 }
 
+#[derive(Default)]
 pub struct ConventionalCardIter {
     suit: SuitIter,
     rank: RankIter,
 }
 
-impl Default for ConventionalCardIter {
-    fn default() -> Self {
-        Self {
-            suit: Default::default(),
-            rank: Default::default(),
-        }
-    }
-}
 
 impl Iterator for ConventionalCardIter {
     type Item = ConventionalCard;
@@ -253,6 +246,12 @@ impl Iterator for RankIter {
 }
 
 pub struct Backside {}
+
+impl Default for Backside {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl Backside {
     pub fn new() -> Self {

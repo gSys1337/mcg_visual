@@ -48,8 +48,7 @@ impl App {
     pub fn new(cc: &eframe::CreationContext) -> Self {
         crate::utils::set_panic_hook();
         egui_extras::install_image_loaders(&cc.egui_ctx);
-        let mut cards: Vec<Box<dyn Card>> = Vec::new();
-        cards.push(Box::new(example::ConventionalCard::new_random()));
+        let cards: Vec<Box<dyn Card>> = vec![Box::new(example::ConventionalCard::new_random())];
         let mut hand: example::HandLayout = Default::default();
         for _ in 0..10 {
             hand.add_card(Box::new(example::ConventionalCard::new_random()));
