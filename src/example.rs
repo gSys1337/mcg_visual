@@ -1,5 +1,3 @@
-use crate::game;
-use crate::game::card;
 // #[cfg(target_arch = "wasm32")]
 #[allow(unused_imports)]
 use crate::log;
@@ -15,12 +13,10 @@ pub struct ConventionalCard {
     pub rank: Rank,
     pub pos: egui::Pos2,
 }
-
 impl ConventionalCard {
     pub fn _iter() -> ConventionalCardIter {
         Default::default()
     }
-
     pub fn new_random() -> Self {
         let mut rng = rand::thread_rng();
         let rank: Rank = rng.gen_range(0..Rank::len()).into();
@@ -30,9 +26,6 @@ impl ConventionalCard {
         let pos = egui::Pos2::new(x, y);
         ConventionalCard { suit, rank, pos }
     }
-}
-
-impl card::Card for ConventionalCard {
     fn img_path(&self) -> String {
         format!(
             "http://127.0.0.1:8080/media/img_cards/{}_{}.png",
@@ -40,27 +33,12 @@ impl card::Card for ConventionalCard {
             self.suit.to_string().to_lowercase()
         )
     }
-
-    fn pos(&self) -> egui::Pos2 {
-        self.pos
-    }
-
-    fn set_pos(&mut self, pos: egui::Pos2) {
-        self.pos = pos;
-    }
-
-    fn translate(&mut self, amt: egui::Vec2) {
-        self.pos += amt;
-    }
 }
-
 #[derive(Default)]
 pub struct ConventionalCardIter {
     suit: SuitIter,
     rank: RankIter,
 }
-
-
 impl Iterator for ConventionalCardIter {
     type Item = ConventionalCard;
 
@@ -82,7 +60,6 @@ impl Iterator for ConventionalCardIter {
         })
     }
 }
-
 #[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd, Eq, Ord)]
 pub enum Suit {
     #[default]
@@ -91,24 +68,20 @@ pub enum Suit {
     Club,
     Spade,
 }
-
 impl fmt::Display for Suit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{self:?}")
     }
 }
-
 impl Suit {
     #[allow(unused)]
     pub fn iter() -> SuitIter {
         Default::default()
     }
-
     pub const fn len() -> usize {
         4
     }
 }
-
 impl From<usize> for Suit {
     fn from(index: usize) -> Self {
         match index {
@@ -122,11 +95,9 @@ impl From<usize> for Suit {
         }
     }
 }
-
 pub struct SuitIter {
     value: Option<Suit>,
 }
-
 impl Default for SuitIter {
     fn default() -> Self {
         Self {
@@ -134,7 +105,6 @@ impl Default for SuitIter {
         }
     }
 }
-
 impl Iterator for SuitIter {
     type Item = Suit;
 
@@ -149,7 +119,6 @@ impl Iterator for SuitIter {
         current
     }
 }
-
 #[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd, Eq, Ord)]
 pub enum Rank {
     #[default]
@@ -167,13 +136,11 @@ pub enum Rank {
     Queen,
     King,
 }
-
 impl fmt::Display for Rank {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{self:?}")
     }
 }
-
 impl Rank {
     #[allow(unused)]
     pub fn iter() -> RankIter {
@@ -184,7 +151,6 @@ impl Rank {
         13
     }
 }
-
 impl From<usize> for Rank {
     fn from(index: usize) -> Self {
         match index {
@@ -207,11 +173,9 @@ impl From<usize> for Rank {
         }
     }
 }
-
 pub struct RankIter {
     value: Option<Rank>,
 }
-
 impl Default for RankIter {
     fn default() -> Self {
         Self {
@@ -219,7 +183,6 @@ impl Default for RankIter {
         }
     }
 }
-
 impl Iterator for RankIter {
     type Item = Rank;
 
@@ -243,13 +206,25 @@ impl Iterator for RankIter {
         current
     }
 }
-
 pub struct Stack {
-    pub cards: Vec<Box<dyn game::Card>>,
+    pub cards: Vec<()>,
     pub pos: egui::Pos2,
     size: egui::Vec2,
     pub inner_margin: i8,
     max_cards: usize,
+}
+impl Default for Stack {
+    fn default() -> Self {
+        let mut x = Self {
+            cards: vec![],
+            pos: egui::pos2(314.15, 271.828),
+            size: Default::default(),
+            inner_margin: 5,
+            max_cards: 0,
+        };
+        x.max_cards(5);
+        x
+    }
 }
 impl Stack {
     fn card_pos(&self, idx: usize) -> egui::Vec2 {
@@ -265,23 +240,6 @@ impl Stack {
         self.size = size;
         self.max_cards = max_cards;
     }
-}
-
-impl Default for Stack {
-    fn default() -> Self {
-        let mut x = Self {
-            cards: vec![],
-            pos: egui::pos2(314.15, 271.828),
-            size: Default::default(),
-            inner_margin: 5,
-            max_cards: 0,
-        };
-        x.max_cards(5);
-        x
-    }
-}
-
-impl Field for Stack {
     fn ui(&self, ui: &mut egui::Ui) -> egui::Response {
         frame::Frame::new()
             .inner_margin(egui::Margin::same(self.inner_margin))
@@ -300,13 +258,7 @@ impl Field for Stack {
                         ui.set_min_size(self.size);
                         for (idx, card) in self.cards.iter().enumerate() {
                             let card_pos = next_pos.add(self.card_pos(idx));
-                            card.draw(
-                                ui,
-                                Some(card_pos),
-                                Some(egui::Sense::all()),
-                                Some(egui::Order::Foreground),
-                                true,
-                            );
+                            todo!("Paint card here");
                         }
                     },
                 )
@@ -315,26 +267,13 @@ impl Field for Stack {
             .inner
     }
 }
-
 pub struct HandLayout {
-    pub cards: Vec<Box<dyn game::Card>>,
+    pub cards: Vec<()>,
     pub pos: egui::Pos2,
     size: egui::Vec2,
     pub inner_margin: i8,
     max_cards: usize,
 }
-
-impl HandLayout {
-    pub fn max_cards(&mut self, max_cards: usize) {
-        let size = egui::Vec2::new(
-            (100.0 + self.inner_margin as f32) * max_cards as f32 - self.inner_margin as f32,
-            144.0,
-        );
-        self.size = size;
-        self.max_cards = max_cards;
-    }
-}
-
 impl Default for HandLayout {
     fn default() -> Self {
         let mut x = Self {
@@ -348,8 +287,15 @@ impl Default for HandLayout {
         x
     }
 }
-
-impl Field for HandLayout {
+impl HandLayout {
+    pub fn max_cards(&mut self, max_cards: usize) {
+        let size = egui::Vec2::new(
+            (100.0 + self.inner_margin as f32) * max_cards as f32 - self.inner_margin as f32,
+            144.0,
+        );
+        self.size = size;
+        self.max_cards = max_cards;
+    }
     fn ui(&self, ui: &mut egui::Ui) -> egui::Response {
         frame::Frame::new()
             .inner_margin(egui::Margin::same(self.inner_margin))
@@ -383,22 +329,19 @@ impl Field for HandLayout {
                             selected = Some(selector as usize);
                         }
                         for (idx, card) in self.cards.iter().enumerate() {
-                            let card_pos = next_pos.add(self.card_pos(idx));
+                            let card_pos =
+                                next_pos.add(todo!("Calculate card position relative to Field"));
                             if selected.is_some() && idx == selected.unwrap() {
                                 continue;
                             }
-                            card.draw(
-                                ui,
-                                Some(card_pos),
-                                Some(egui::Sense::all()),
-                                Some(egui::Order::Foreground),
-                                true,
-                            );
+                            todo!("Paint card here");
                         }
                         if selected.is_some() {
                             if let Some(card) = self.cards.get(selected.unwrap()) {
                                 let card_pos = next_pos
-                                    .add(self.card_pos(selected.unwrap()))
+                                    .add(todo!(
+                                        "Calculate position of selected card relative to Field"
+                                    ))
                                     .add(egui::vec2(0.0, -10.0));
                                 egui::Area::new(ui.next_auto_id())
                                     .order(egui::Order::Foreground)
@@ -410,7 +353,7 @@ impl Field for HandLayout {
                                             .corner_radius(egui::CornerRadius::same(2))
                                             .show(ui, |ui| {
                                                 ui.allocate_new_ui(egui::UiBuilder::new(), |ui| {
-                                                    ui.add(card.as_ref());
+                                                    todo!("Paint card here");
                                                 });
                                             });
                                     });
@@ -422,5 +365,4 @@ impl Field for HandLayout {
             })
             .inner
     }
-
 }

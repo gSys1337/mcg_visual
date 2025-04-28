@@ -283,7 +283,11 @@ impl<C: CardWidget> FieldWidget for SimpleField<C> {
                                                     ui.allocate_new_ui(
                                                         egui::UiBuilder::new(),
                                                         |ui| {
-                                                            ui.add(card.img().maintain_aspect_ratio(true).max_size(self.size));
+                                                            ui.add(
+                                                                card.img()
+                                                                    .maintain_aspect_ratio(true)
+                                                                    .max_size(self.size),
+                                                            );
                                                         },
                                                     );
                                                 });
@@ -296,5 +300,11 @@ impl<C: CardWidget> FieldWidget for SimpleField<C> {
                 })
                 .inner
         }
+    }
+}
+
+impl<C: CardWidget> Default for SimpleField<C> {
+    fn default() -> Self {
+        Self::new()
     }
 }

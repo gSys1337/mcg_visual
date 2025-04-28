@@ -1,4 +1,4 @@
-// pub mod example;
+pub mod example;
 pub mod game;
 mod utils;
 

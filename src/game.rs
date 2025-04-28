@@ -136,7 +136,7 @@ impl eframe::App for App {
                             .as_str());
                             let len = self.current_state.player_cards.len();
                             let x = 0..delta.unsigned_abs();
-                            x.for_each(|i| f(&mut self.current_state.player_cards, i+len));
+                            x.for_each(|i| f(&mut self.current_state.player_cards, i + len));
                             ctx.open_url(egui::OpenUrl::same_tab(format!("#{:?}", Anchor::Game)));
                         };
                         let settings = egui::Button::new("Settings");
@@ -183,17 +183,19 @@ impl eframe::App for App {
                                 ui,
                                 &mut self.next_card,
                                 card_type.all_images().len(),
-                                |idx | format!("{}", card_type.all_images().nth(idx).unwrap())
+                                |idx| card_type.all_images().nth(idx).unwrap().to_string(),
                             );
                             egui::ComboBox::from_label("Player").show_index(
                                 ui,
                                 &mut self.next_player,
                                 self.current_state.players,
-                                |idx | (idx+1).to_string()
+                                |idx| (idx + 1).to_string(),
                             );
                             if ui.button("Add").clicked() {
-                                let card_type = Rc::new(self.card_types.borrow().as_ref().unwrap().clone());
-                                self.current_state.player_cards[self.next_player].push(SimpleCard::new(self.next_card, card_type));
+                                let card_type =
+                                    Rc::new(self.card_types.borrow().as_ref().unwrap().clone());
+                                self.current_state.player_cards[self.next_player]
+                                    .push(SimpleCard::new(self.next_card, card_type));
                             }
                         }
                         let player_area = egui::Area::new(egui::Id::new("player"))
