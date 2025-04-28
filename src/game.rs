@@ -1,46 +1,26 @@
 use eframe::emath;
 use egui::{Context, Direction};
-use rand::Rng;
 use std::cell::RefCell;
 
 // #[cfg(target_arch = "wasm32")]
 #[allow(unused_imports)]
 use crate::log;
 pub mod card;
-pub mod vfx;
-use crate::example;
-pub use crate::game::card::Card;
-use crate::game::card::{DirectoryCardType, Drawable};
-pub use vfx::Field;
+use crate::game::card::{DirectoryCardType, FieldWidget, SimpleCard, SimpleField};
 
+#[derive(Default)]
 pub struct State {
     players: usize,
-    player_cards: Vec<Box<dyn Field>>,
-}
-
-impl Default for State {
-    fn default() -> Self {
-        let mut first: example::HandLayout = Default::default();
-        for _ in 0..10 {
-            first.add_card(Box::new(example::ConventionalCard::new_random()));
-        }
-        Self {
-            players: 2,
-            player_cards: vec![Box::new(first), Box::new(example::HandLayout::default())],
-        }
-    }
+    player_cards: Vec<SimpleField<SimpleCard<DirectoryCardType>>>,
 }
 
 pub struct App {
     card_types: Rc<RefCell<Option<DirectoryCardType>>>,
     current_state: State,
-    cards: Vec<Box<dyn Card>>,
-    next_suit: usize,
-    next_rank: usize,
+    next_card: usize,
+    next_player: usize,
     screen_width: f32,
     screen_height: f32,
-    hand: example::HandLayout,
-    stack: Box<dyn Field>,
 }
 
 impl App {
@@ -48,27 +28,13 @@ impl App {
     pub fn new(cc: &eframe::CreationContext) -> Self {
         crate::utils::set_panic_hook();
         egui_extras::install_image_loaders(&cc.egui_ctx);
-        let cards: Vec<Box<dyn Card>> = vec![Box::new(example::ConventionalCard::new_random())];
-        let mut hand: example::HandLayout = Default::default();
-        for _ in 0..10 {
-            hand.add_card(Box::new(example::ConventionalCard::new_random()));
-        }
-        let mut stack: example::Stack = Default::default();
-        for _ in 0..10 {
-            stack.add_card(Box::new(example::ConventionalCard::new_random()));
-        }
-        stack.pos.x += 400.0;
-        let stack: Box<dyn Field> = Box::new(stack);
         Self {
             card_types: Rc::new(RefCell::new(None)),
             current_state: Default::default(),
-            cards,
-            next_suit: Default::default(),
-            next_rank: Default::default(),
+            next_card: 0,
+            next_player: 0,
             screen_width: 0.0,
             screen_height: 0.0,
-            hand,
-            stack,
         }
     }
 }
@@ -151,12 +117,13 @@ impl eframe::App for App {
                             let delta = self.current_state.player_cards.len() as isize
                                 - self.current_state.players as isize;
                             let f = if delta >= 0 {
-                                |v: &mut Vec<Box<dyn Field>>| {
+                                |v: &mut Vec<_>, _idx| {
                                     v.pop();
                                 }
                             } else {
-                                |v: &mut Vec<Box<dyn Field>>| {
-                                    v.push(Box::new(example::HandLayout::default()))
+                                |v: &mut Vec<_>, idx| {
+                                    let pos = egui::pos2(70.0, 170.0 * (idx + 1) as f32);
+                                    v.push(SimpleField::new().pos(pos))
                                 }
                             };
                             // #[cfg(target_arch = "wasm32")]
@@ -167,28 +134,10 @@ impl eframe::App for App {
                                 delta
                             )
                             .as_str());
-                            let x = 0..delta.abs();
-                            x.for_each(|_| f(&mut self.current_state.player_cards));
-                            self.current_state
-                                .player_cards
-                                .iter_mut()
-                                .enumerate()
-                                .for_each(|(i, hand)| {
-                                    let pos = egui::pos2(70.0, 170.0 * (i + 1) as f32);
-                                    hand.set_pos(pos);
-                                });
+                            let len = self.current_state.player_cards.len();
+                            let x = 0..delta.unsigned_abs();
+                            x.for_each(|i| f(&mut self.current_state.player_cards, i+len));
                             ctx.open_url(egui::OpenUrl::same_tab(format!("#{:?}", Anchor::Game)));
-                            if self.current_state.players >= 2 {
-                                let mut field: example::HandLayout = Default::default();
-                                let card_type = Rc::new(self.card_types.borrow().clone().unwrap());
-                                for t in 0..10usize {
-                                    field.add_card(Box::new(card::SimpleCard::new(
-                                        t,
-                                        Rc::clone(&card_type),
-                                    )));
-                                }
-                                self.current_state.player_cards[1] = Box::new(field);
-                            }
                         };
                         let settings = egui::Button::new("Settings");
                         if ui.add(settings).clicked() {
@@ -212,23 +161,11 @@ impl eframe::App for App {
                         }
                         // ui.add(&mut self.hand);
                         // ui.advance_cursor_after_rect(egui::Rect::from_min_size(egui::pos2(0.0, 0.0), egui::vec2(100000.0, 1000.0)));
-                        for player in self.current_state.player_cards.iter_mut() {
+                        for player in &self.current_state.player_cards {
                             // let r = ui.add(&**player);
                             // ui.advance_cursor_after_rect(r.rect);
-                            player.draw(ui, None, None, None, false);
+                            ui.add(player.draw());
                             // player.draw(ui, None, Some(egui::Sense::empty()), None, false);
-                        }
-                        // ui.add(&*self.stack);
-                        self.stack
-                            .draw(ui, None, Some(egui::Sense::empty()), None, true);
-                        for card in self.cards.iter_mut() {
-                            let sense = egui::Sense::click_and_drag();
-                            // TODO investigate bug that all cards share the same egui::ID
-                            let ir = card.draw(ui, None, Some(sense), None, true);
-                            let r = ir.inner;
-                            if r.is_pointer_button_down_on() {
-                                card.translate(r.drag_delta());
-                            }
                         }
                     }
                     Anchor::Settings => {
@@ -240,47 +177,24 @@ impl eframe::App for App {
                             log("back to main menu");
                             ctx.open_url(egui::OpenUrl::same_tab(format!("#{:?}", Anchor::Menu)));
                         }
-                        let suit_area = egui::Area::new(egui::Id::new("suit"))
-                            .sense(egui::Sense::click())
-                            .current_pos(ui.next_widget_position());
-                        let ir = suit_area.show(ctx, |ui| {
-                            egui::ComboBox::from_label("Suit").show_index(
+                        if self.card_types.borrow().is_some() {
+                            let card_type = self.card_types.borrow().as_ref().unwrap().clone();
+                            egui::ComboBox::from_label("Card").show_index(
                                 ui,
-                                &mut self.next_suit,
-                                example::Suit::len(),
-                                |idx| format!("{}", example::Suit::from(idx)),
-                            )
-                        });
-                        ui.advance_cursor_after_rect(ir.response.rect);
-                        let rank_area = egui::Area::new(egui::Id::new("rank"))
-                            .sense(egui::Sense::click())
-                            .current_pos(ui.next_widget_position());
-                        let ir = rank_area.show(ctx, |ui| {
-                            egui::ComboBox::from_label("Rank").show_index(
+                                &mut self.next_card,
+                                card_type.all_images().len(),
+                                |idx | format!("{}", card_type.all_images().nth(idx).unwrap())
+                            );
+                            egui::ComboBox::from_label("Player").show_index(
                                 ui,
-                                &mut self.next_rank,
-                                example::Rank::len(),
-                                |idx| format!("{}", example::Rank::from(idx)),
-                            )
-                        });
-                        ui.advance_cursor_after_rect(ir.response.rect);
-                        if ui.button("Add").clicked() {
-                            let x =
-                                rand::thread_rng().gen_range(0..self.screen_width as i32) as f32;
-                            let y =
-                                rand::thread_rng().gen_range(0..self.screen_height as i32) as f32;
-                            let card = example::ConventionalCard {
-                                suit: example::Suit::from(self.next_suit),
-                                rank: example::Rank::from(self.next_rank),
-                                pos: egui::Pos2::from((x, y)),
-                            };
-                            self.cards.push(Box::new(card));
-                            // #[cfg(target_arch = "wasm32")]
-                            log(format!("added card @ ({}|{})", x, y).as_str());
-                        }
-                        if ui.button("Random").clicked() {
-                            self.hand
-                                .add_card(Box::new(example::ConventionalCard::new_random()));
+                                &mut self.next_player,
+                                self.current_state.players,
+                                |idx | (idx+1).to_string()
+                            );
+                            if ui.button("Add").clicked() {
+                                let card_type = Rc::new(self.card_types.borrow().as_ref().unwrap().clone());
+                                self.current_state.player_cards[self.next_player].push(SimpleCard::new(self.next_card, card_type));
+                            }
                         }
                         let player_area = egui::Area::new(egui::Id::new("player"))
                             .sense(egui::Sense::click())
