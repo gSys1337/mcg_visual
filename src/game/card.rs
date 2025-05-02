@@ -49,9 +49,9 @@ impl CardWidget for SimpleCard<DirectoryCardType> {
 #[derive(Clone, Debug)]
 #[allow(non_snake_case)]
 pub struct DirectoryCardType {
-    path: String,
-    img_names: Vec<String>,
-    T: usize,
+    pub(crate) path: String,
+    pub(crate) img_names: Vec<String>,
+    pub(crate) T: usize,
     size: RefCell<Option<egui::Vec2>>,
 }
 
