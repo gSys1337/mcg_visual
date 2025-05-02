@@ -8,7 +8,7 @@ edition = "2018"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["console_error_panic_hook"]
+default = []
 
 [dependencies]
 wasm-bindgen = "0.2.100"
@@ -21,7 +21,6 @@ console_error_panic_hook = { version = "0.1.7", optional = true }
 web-sys = { version = "0.3.77", features = ["HtmlCanvasElement"] }
 egui = "0.31.1"
 eframe = "0.31.1"
-egui_extras = { version = "0.31.1", features = ["all_loaders", "image", "svg", "file"] }
 wasm-bindgen-futures = "0.4.50"
 rand = { version = "<0.9.0", features = ["small_rng"] }
 # rand = { version = "0.9.1", features = ["small_rng"] }

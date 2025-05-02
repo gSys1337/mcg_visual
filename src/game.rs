@@ -1,12 +1,15 @@
 use eframe::emath;
 use egui::{Context, Direction};
 use std::cell::RefCell;
+use std::collections::HashMap;
 
 // #[cfg(target_arch = "wasm32")]
 #[allow(unused_imports)]
 use crate::log;
 pub mod card;
+pub mod screen;
 use crate::game::card::{DirectoryCardType, FieldWidget, SimpleCard, SimpleField};
+use screen::{ScreenWidget, MainMenu};
 
 #[derive(Default)]
 pub struct State {
@@ -14,7 +17,9 @@ pub struct State {
     player_cards: Vec<SimpleField<SimpleCard<DirectoryCardType>>>,
 }
 
-pub struct App {
+pub struct App<'a> {
+    screens: HashMap<&'a str, Box<dyn ScreenWidget>>,
+    current_screen: Rc<RefCell<&'a str>>,
     card_types: Rc<RefCell<Option<DirectoryCardType>>>,
     current_state: State,
     next_card: usize,
@@ -23,18 +28,34 @@ pub struct App {
     screen_height: f32,
 }
 
-impl App {
+impl Default for App<'_> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<'a> App<'a> {
     #[allow(unused)]
-    pub fn new(cc: &eframe::CreationContext) -> Self {
-        crate::utils::set_panic_hook();
-        egui_extras::install_image_loaders(&cc.egui_ctx);
+    pub fn new() -> Self {
+        let mut screens = HashMap::new();
+        screens.insert("main_menu", Box::new(MainMenu {}) as Box<dyn ScreenWidget>);
         Self {
+            screens,
+            current_screen: Rc::new(RefCell::new("main_menu")),
             card_types: Rc::new(RefCell::new(None)),
             current_state: Default::default(),
             next_card: 0,
             next_player: 0,
             screen_width: 0.0,
             screen_height: 0.0,
+        }
+    }
+    pub fn register_screen(&'a mut self, name: &'a str, screen: Box<dyn ScreenWidget>) -> Result<(), ()> {
+        if !self.screens.contains_key(name) {
+            self.screens.insert(name, screen);
+            Ok(())
+        } else {
+            Err(())
         }
     }
 }
@@ -66,8 +87,11 @@ use std::collections::BTreeMap;
 use std::rc::Rc;
 use std::str::FromStr;
 
-impl eframe::App for App {
-    fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
+impl eframe::App for App<'_> {
+    fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
+        let menu = self.screens.get_mut("main_menu").unwrap();
+        menu.update(Rc::clone(&self.current_screen), ctx, frame);
+        return;
         egui::CentralPanel::default().show(ctx, |ui| {
             let size = 30.0;
             // TODO move text size into settings
@@ -90,7 +114,7 @@ impl eframe::App for App {
                 emath::Align::Center,
             );
             // #[cfg(target_arch = "wasm32")]
-            let window = _frame
+            let window = frame
                 .info()
                 .web_info
                 .location
