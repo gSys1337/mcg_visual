@@ -141,11 +141,11 @@ pub struct SimpleField<C: CardWidget> {
     kind: SimpleFieldKind,
     cards: Vec<C>,
     pos: Option<egui::Pos2>,
-    inner_margin: i8,
+    margin: i8,
     max_cards: usize,
     selectable: bool,
     sense: egui::Sense,
-    size: egui::Vec2,
+    pub(crate) size: egui::Vec2,
 }
 impl<C: CardWidget> SimpleField<C> {
     // Builder
@@ -154,11 +154,11 @@ impl<C: CardWidget> SimpleField<C> {
             kind: SimpleFieldKind::Horizontal,
             cards: vec![],
             pos: None,
-            inner_margin: 5,
+            margin: 4,
             max_cards: 5,
             selectable: false,
             sense: egui::Sense::empty(),
-            size: egui::Vec2::new(100.0, 144.0),
+            size: egui::Vec2::new(100.0, 135.0),
         }
     }
     pub fn from_collection(cards: impl IntoIterator<Item = C>) -> Self {
@@ -174,16 +174,13 @@ impl<C: CardWidget> SimpleField<C> {
         }
     }
     pub fn max_cards(self, max_cards: usize) -> Self {
-        todo!()
+        SimpleField { max_cards, ..self }
     }
     pub fn kind(self, kind: SimpleFieldKind) -> Self {
         SimpleField { kind, ..self }
     }
-    pub fn inner_margin(self, margin: i8) -> Self {
-        SimpleField {
-            inner_margin: margin,
-            ..self
-        }
+    pub fn margin(self, margin: i8) -> Self {
+        SimpleField { margin, ..self }
     }
     pub fn selectable(self, selectable: bool) -> Self {
         SimpleField { selectable, ..self }
@@ -201,18 +198,73 @@ impl<C: CardWidget> SimpleField<C> {
                 } else {
                     self.max_cards as f32
                 };
-                egui::Vec2::new(x, -x + self.inner_margin as f32)
+                egui::Vec2::new(x, -x)
             }
             SimpleFieldKind::Horizontal => {
                 let cards = self.cards.len();
                 let x = if cards <= self.max_cards {
-                    (100.0 + self.inner_margin as f32) * (idx as f32)
+                    (self.size.x + self.margin as f32) * (idx as f32)
                 } else {
-                    (self.size.x - 100.0) * (idx as f32) / (cards - 1) as f32
+                    (self.size.x + self.margin as f32) * (idx as f32) * ((self.max_cards - 1) as f32) / ((cards - 1) as f32)
                 };
                 egui::Vec2::new(x, 0.0)
             }
         }
+    }
+    fn draw_stack(&self, ui: &mut egui::Ui) -> egui::Response {
+        ui.set_min_size(self.size);
+        let origin = ui.next_widget_position().add(egui::vec2(
+            0.0,
+            self.size.y / 2.0 + self.max_cards as f32,
+        ));
+        let content_size = self.size.add(egui::vec2(
+            self.max_cards as f32,
+            self.max_cards as f32,
+        ));
+        ui.set_min_size(content_size);
+        for (idx, card) in self.cards.iter().enumerate() {
+            let img = card.img();
+            if let Some(size) = img.load_and_calc_size(ui, self.size) {
+                img.paint_at(
+                    ui,
+                    egui::Rect::from_min_size(
+                        origin.add(
+                            self.card_pos(idx)
+                                .add(egui::vec2(0.0, -size.y)),
+                        ),
+                        size,
+                    ),
+                );
+            }
+        }
+        ui.response()
+    }
+    fn draw_horizontal(&self, ui: &mut egui::Ui) -> egui::Response {
+        let content_size = self.size.add(egui::vec2(
+            (self.max_cards as f32 - 1.0) * (self.size.x + self.margin as f32),
+            0.0,
+        ));
+        ui.set_min_size(content_size);
+        let origin = ui.next_widget_position().add(egui::vec2(
+            0.0,
+            self.size.y / 2.0,
+        ));
+        for (idx, card) in self.cards.iter().enumerate() {
+            let img = card.img();
+            if let Some(size) = img.load_and_calc_size(ui, self.size) {
+                img.paint_at(
+                    ui,
+                    egui::Rect::from_min_size(
+                        origin.add(
+                            self.card_pos(idx)
+                                .add(egui::vec2(0.0, -size.y)),
+                        ),
+                        size,
+                    ),
+                );
+            }
+        }
+        ui.response()
     }
     pub fn push(&mut self, card: C) {
         self.cards.push(card);
@@ -228,77 +280,18 @@ impl<C: CardWidget> FieldWidget for SimpleField<C> {
     fn draw(&self) -> impl egui::Widget {
         move |ui: &mut egui::Ui| -> egui::Response {
             frame::Frame::new()
-                .inner_margin(egui::Margin::same(self.inner_margin))
-                .outer_margin(egui::Margin::same(self.inner_margin))
+                .inner_margin(egui::Margin::same(self.margin))
                 .stroke(egui::Stroke::new(2.0, egui::Color32::DEBUG_COLOR))
                 .fill(egui::Color32::DARK_GREEN)
-                .corner_radius(egui::CornerRadius::same(self.inner_margin.unsigned_abs()))
+                .corner_radius(egui::CornerRadius::same(self.margin.unsigned_abs()))
                 .show(ui, |ui| {
-                    let next_pos = ui.next_widget_position();
-                    ui.allocate_new_ui(
-                        egui::UiBuilder::new()
-                            .max_rect(egui::Rect::from_min_size(next_pos, self.size))
-                            .layer_id(egui::LayerId::background()),
-                        |ui| {
-                            ui.set_max_size(self.size);
-                            ui.set_min_size(self.size);
-                            let pointer = ui.input(|state| state.pointer.clone());
-                            let mut selected = None;
-                            if pointer.latest_pos().is_some()
-                                && ui.max_rect().contains(pointer.latest_pos().unwrap())
-                            {
-                                let left = ui.max_rect().left();
-                                let right = ui.max_rect().right();
-                                let selector = self.cards.len() as f32
-                                    * (pointer
-                                        .latest_pos()
-                                        .unwrap_or_else(|| egui::pos2(left, 0.0))
-                                        .x
-                                        - left)
-                                    / (right - left);
-                                selected = Some(selector as usize);
-                            }
-                            for (idx, card) in
-                                self.cards.iter().enumerate().filter(|(idx, _)| {
-                                    selected.is_none() || *idx != selected.unwrap()
-                                })
-                            {
-                                let card_pos = next_pos.add(self.card_pos(idx));
-                                ui.add(card.img());
-                            }
-                            if selected.is_some() {
-                                if let Some(card) = self.cards.get(selected.unwrap()) {
-                                    let card_pos = next_pos
-                                        .add(self.card_pos(selected.unwrap()))
-                                        .add(egui::vec2(0.0, -10.0));
-                                    egui::Area::new(ui.next_auto_id())
-                                        .order(egui::Order::Foreground)
-                                        .sense(egui::Sense::all())
-                                        .current_pos(card_pos)
-                                        .show(ui.ctx(), |ui| {
-                                            egui::Frame::new()
-                                                .stroke(egui::Stroke::new(2.0, egui::Color32::RED))
-                                                .corner_radius(egui::CornerRadius::same(2))
-                                                .show(ui, |ui| {
-                                                    ui.allocate_new_ui(
-                                                        egui::UiBuilder::new(),
-                                                        |ui| {
-                                                            ui.add(
-                                                                card.img()
-                                                                    .maintain_aspect_ratio(true)
-                                                                    .max_size(self.size),
-                                                            );
-                                                        },
-                                                    );
-                                                });
-                                        });
-                                }
-                            }
-                        },
-                    )
-                    .response
+                    ui.allocate_ui(self.size, |ui| match self.kind {
+                        SimpleFieldKind::Stack => self.draw_stack(ui),
+                        SimpleFieldKind::Horizontal => self.draw_horizontal(ui),
+                    })
+                    .inner
                 })
-                .inner
+                .response
         }
     }
 }
