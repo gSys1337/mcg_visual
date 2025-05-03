@@ -53,28 +53,23 @@ impl GameSetupScreen {
             game_widget,
         }
     }
-    /// Panics if no directory is selected!
-    fn generate_config(&self) -> GameConfig {
-        let directory = self
-            .directory
-            .borrow()
-            .clone()
-            .expect("Expecting only to be called when a directory has been selected");
+    fn generate_config(&self) -> Option<GameConfig> {
+        let directory = self.directory.borrow().clone()?;
         let players = (0..self.players)
             .map(|i| (format!("{i}"), SimpleField::new()))
             .collect();
         let stack = SimpleField::new().kind(Stack);
-        GameConfig {
+        Some(GameConfig {
             directory,
             players,
             stack,
-        }
+        })
     }
 }
 impl ScreenWidget for GameSetupScreen {
     fn update(&mut self, next_screen: Rc<RefCell<String>>, ctx: &Context, _frame: &mut Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.vertical(|ui| {
+            ui.horizontal(|ui| {
                 ui.label("Selected Directory:");
                 match self.directory.borrow().as_ref() {
                     None => ui.label("None"),
@@ -84,23 +79,26 @@ impl ScreenWidget for GameSetupScreen {
             if ui.button("Select Directory").clicked() {
                 DirectoryCardType::new_from_selection(Rc::clone(&self.directory));
             }
-            ui.vertical(|ui| {
+            ui.horizontal(|ui| {
                 ui.label("# Players");
                 let drag = egui::DragValue::new(&mut self.players);
                 ui.add(drag);
-                let dec = egui::Button::new("-").min_size(egui::vec2(50.0, 50.0));
+                let dec = egui::Button::new("-").min_size(egui::vec2(30.0, 0.0));
                 if ui.add(dec).clicked() {
                     self.players = self.players.saturating_sub(1);
                 }
-                let inc = egui::Button::new("+").min_size(egui::vec2(50.0, 50.0));
+                let inc = egui::Button::new("+").min_size(egui::vec2(30.0, 0.0));
                 if ui.add(inc).clicked() {
                     self.players = self.players.saturating_add(1);
                 }
             });
             if ui.button("Start Game").clicked() {
                 if let Some(game) = self.game_widget.upgrade() {
-                    game.borrow_mut().game_config = Some(self.generate_config());
-                    *next_screen.borrow_mut() = String::from("game");
+                    let config = self.generate_config();
+                    if let Some(_) = config {
+                        game.borrow_mut().game_config = config;
+                        *next_screen.borrow_mut() = String::from("game");
+                    }
                 }
             }
             if ui.button("Back").clicked() {
@@ -112,6 +110,11 @@ impl ScreenWidget for GameSetupScreen {
 }
 pub struct Game {
     pub(crate) game_config: Option<GameConfig>,
+}
+impl Default for Game {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 impl Game {
     pub fn new() -> Self {
