@@ -1,15 +1,15 @@
-// #[cfg(target_arch = "wasm32")]
-#[allow(unused_imports)]
-use crate::log;
+#[cfg(target_arch = "wasm32")]
 use crate::openDirectoryPicker;
-use egui::frame;
 use egui::ImageSource::Uri;
+use egui::{frame, vec2, Rect};
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::ops::Add;
 use std::rc::Rc;
 use std::slice::Iter;
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures::js_sys::Array;
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures::{spawn_local, JsFuture};
 
 pub trait CardWidget {
@@ -61,6 +61,7 @@ impl DirectoryCardType {
     ///
     /// For real file upload you need to extend the simple python http server to accept uploads.
     /// Does pythons simple https server already accept POST requests?
+    #[cfg(target_arch = "wasm32")]
     pub fn new_from_selection(holder: Rc<RefCell<Option<DirectoryCardType>>>) {
         let type_rc = Rc::clone(&holder);
         spawn_local(async move {
@@ -136,7 +137,7 @@ pub enum SimpleFieldKind {
     Stack,
     Horizontal,
 }
-
+#[allow(dead_code)]
 pub struct SimpleField<C: CardWidget> {
     kind: SimpleFieldKind,
     cards: Vec<C>,
@@ -218,18 +219,18 @@ impl<C: CardWidget> SimpleField<C> {
         ui.set_min_size(self.size);
         let origin = ui
             .next_widget_position()
-            .add(egui::vec2(0.0, self.size.y / 2.0 + self.max_cards as f32));
+            .add(vec2(0.0, self.size.y / 2.0 + self.max_cards as f32));
         let content_size = self
             .size
-            .add(egui::vec2(self.max_cards as f32, self.max_cards as f32));
+            .add(vec2(self.max_cards as f32, self.max_cards as f32));
         ui.set_min_size(content_size);
         for (idx, card) in self.cards.iter().enumerate() {
             let img = card.img();
             if let Some(size) = img.load_and_calc_size(ui, self.size) {
                 img.paint_at(
                     ui,
-                    egui::Rect::from_min_size(
-                        origin.add(self.card_pos(idx).add(egui::vec2(0.0, -size.y))),
+                    Rect::from_min_size(
+                        origin.add(self.card_pos(idx).add(vec2(0.0, -size.y))),
                         size,
                     ),
                 );
@@ -238,14 +239,14 @@ impl<C: CardWidget> SimpleField<C> {
         ui.response()
     }
     fn draw_horizontal(&self, ui: &mut egui::Ui) -> egui::Response {
-        let content_size = self.size.add(egui::vec2(
+        let content_size = self.size.add(vec2(
             (self.max_cards as f32 - 1.0) * (self.size.x + self.margin as f32),
             0.0,
         ));
         ui.set_min_size(content_size);
         let origin = ui
             .next_widget_position()
-            .add(egui::vec2(0.0, self.size.y / 2.0));
+            .add(vec2(0.0, self.size.y / 2.0));
         let pointer_pos = ui.input(|state| state.pointer.latest_pos());
         let rect = ui.min_rect();
         let selection: Option<usize> = if pointer_pos.is_some()
@@ -260,7 +261,8 @@ impl<C: CardWidget> SimpleField<C> {
         } else {
             None
         };
-        let (normal, selected): (Vec<(usize, &C)>, Vec<(usize, &C)>) =
+        type Partition<'a, C> = (Vec<(usize, &'a C)>, Vec<(usize, &'a C)>);
+        let (normal, selected): Partition<C> =
             self.cards.iter().enumerate().partition(|(i, _)| {
                 !(self.selectable && (selection.is_some() && selection.unwrap() == *i))
             });
@@ -269,8 +271,8 @@ impl<C: CardWidget> SimpleField<C> {
             if let Some(size) = img.load_and_calc_size(ui, self.size) {
                 img.paint_at(
                     ui,
-                    egui::Rect::from_min_size(
-                        origin.add(self.card_pos(idx).add(egui::vec2(0.0, -size.y))),
+                    Rect::from_min_size(
+                        origin.add(self.card_pos(idx).add(vec2(0.0, -size.y))),
                         size,
                     ),
                 );
@@ -283,8 +285,8 @@ impl<C: CardWidget> SimpleField<C> {
                     .fixed_pos(
                         origin
                             .add(self.card_pos(idx))
-                            .add(egui::vec2(0.0, -size.y))
-                            .add(egui::vec2(0.0, -self.margin as f32)),
+                            .add(vec2(0.0, -size.y))
+                            .add(vec2(0.0, -self.margin as f32)),
                     )
                     .show(ui.ctx(), |ui| {
                         egui::Frame::new()
@@ -294,11 +296,11 @@ impl<C: CardWidget> SimpleField<C> {
                                 ui.set_min_size(size);
                                 img.paint_at(
                                     ui,
-                                    egui::Rect::from_min_size(
+                                    Rect::from_min_size(
                                         origin
                                             .add(self.card_pos(idx))
-                                            .add(egui::vec2(0.0, -size.y))
-                                            .add(egui::vec2(
+                                            .add(vec2(0.0, -size.y))
+                                            .add(vec2(
                                                 self.margin as f32 / 2.0,
                                                 -self.margin as f32 / 2.0,
                                             )),

@@ -1,6 +1,3 @@
-// #[cfg(target_arch = "wasm32")]
-#[allow(unused_imports)]
-use crate::log;
 use egui;
 use egui::frame;
 use rand::Rng;
@@ -26,6 +23,7 @@ impl ConventionalCard {
         let pos = egui::Pos2::new(x, y);
         ConventionalCard { suit, rank, pos }
     }
+    #[allow(dead_code)]
     fn img_path(&self) -> String {
         format!(
             "http://127.0.0.1:8080/media/img_cards/{}_{}.png",
@@ -227,6 +225,7 @@ impl Default for Stack {
     }
 }
 impl Stack {
+    #[allow(dead_code)]
     fn card_pos(&self, idx: usize) -> egui::Vec2 {
         let x = if idx <= self.max_cards {
             idx as f32
@@ -240,6 +239,7 @@ impl Stack {
         self.size = size;
         self.max_cards = max_cards;
     }
+    #[allow(dead_code)]
     fn ui(&self, ui: &mut egui::Ui) -> egui::Response {
         frame::Frame::new()
             .inner_margin(egui::Margin::same(self.inner_margin))
@@ -256,8 +256,8 @@ impl Stack {
                     |ui| {
                         ui.set_max_size(self.size);
                         ui.set_min_size(self.size);
-                        for (idx, card) in self.cards.iter().enumerate() {
-                            let card_pos = next_pos.add(self.card_pos(idx));
+                        for (idx, _card) in self.cards.iter().enumerate() {
+                            let _card_pos = next_pos.add(self.card_pos(idx));
                             todo!("Paint card here");
                         }
                     },
@@ -296,6 +296,7 @@ impl HandLayout {
         self.size = size;
         self.max_cards = max_cards;
     }
+    #[allow(dead_code)]
     fn ui(&self, ui: &mut egui::Ui) -> egui::Response {
         frame::Frame::new()
             .inner_margin(egui::Margin::same(self.inner_margin))
@@ -328,17 +329,22 @@ impl HandLayout {
                                 / (right - left);
                             selected = Some(selector as usize);
                         }
-                        for (idx, card) in self.cards.iter().enumerate() {
-                            let card_pos =
+                        for (_idx, _card) in self.cards.iter().enumerate() {
+                            #[allow(unreachable_code)]
+                            #[allow(clippy::diverging_sub_expression)]
+                            let _card_pos =
                                 next_pos.add(todo!("Calculate card position relative to Field"));
-                            if selected.is_some() && idx == selected.unwrap() {
+                            #[allow(unreachable_code)]
+                            if selected.is_some() && _idx == selected.unwrap() {
                                 continue;
                             }
                             todo!("Paint card here");
                         }
                         if selected.is_some() {
-                            if let Some(card) = self.cards.get(selected.unwrap()) {
-                                let card_pos = next_pos
+                            if let Some(_card) = self.cards.get(selected.unwrap()) {
+                                #[allow(unreachable_code)]
+                                #[allow(clippy::diverging_sub_expression)]
+                                let _card_pos = next_pos
                                     .add(todo!(
                                         "Calculate position of selected card relative to Field"
                                     ))
@@ -346,13 +352,13 @@ impl HandLayout {
                                 egui::Area::new(ui.next_auto_id())
                                     .order(egui::Order::Foreground)
                                     .sense(egui::Sense::all())
-                                    .current_pos(card_pos)
+                                    .current_pos(_card_pos)
                                     .show(ui.ctx(), |ui| {
                                         egui::Frame::new()
                                             .stroke(egui::Stroke::new(2.0, egui::Color32::RED))
                                             .corner_radius(egui::CornerRadius::same(2))
                                             .show(ui, |ui| {
-                                                ui.allocate_new_ui(egui::UiBuilder::new(), |ui| {
+                                                ui.allocate_new_ui(egui::UiBuilder::new(), |_ui| {
                                                     todo!("Paint card here");
                                                 });
                                             });

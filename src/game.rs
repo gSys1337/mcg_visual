@@ -1,11 +1,7 @@
 use egui::Context;
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{hash_map, HashMap};
 use std::rc::Rc;
-
-// #[cfg(target_arch = "wasm32")]
-#[allow(unused_imports)]
-use crate::log;
 pub mod card;
 pub mod screen;
 use screen::{MainMenu, ScreenWidget};
@@ -35,13 +31,14 @@ impl App {
             current_screen,
         }
     }
+    #[allow(clippy::result_unit_err)]
     pub fn register_screen(
         &mut self,
         name: String,
         screen: Rc<RefCell<dyn ScreenWidget>>,
     ) -> Result<(), ()> {
-        if !self.screens.contains_key(&name) {
-            self.screens.insert(name, screen);
+        if let hash_map::Entry::Vacant(e) = self.screens.entry(name) {
+            e.insert(screen);
             Ok(())
         } else {
             Err(())

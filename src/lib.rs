@@ -2,11 +2,15 @@ pub mod example;
 pub mod game;
 mod utils;
 
+#[allow(unused_imports)]
+use eframe::AppCreator;
 #[cfg(target_arch = "wasm32")]
-use eframe::WebRunner;
-use eframe::{AppCreator, WebOptions};
+use eframe::{WebOptions, WebRunner};
+#[allow(unused_imports)]
 use wasm_bindgen::prelude::*;
+#[allow(unused_imports)]
 use wasm_bindgen_futures::spawn_local;
+#[allow(unused_imports)]
 use web_sys::js_sys::Promise;
 
 #[cfg(target_arch = "wasm32")]
@@ -38,3 +42,12 @@ pub fn start_game(
     https://github.com/emilk/egui/blob/master/crates/egui/src/containers/popup.rs
     gets into a proper egui release
 */
+#[macro_export]
+macro_rules! sprintln {
+    ($($arg:tt)*) => {{
+        #[cfg(target_arch = "wasm32")]
+        $crate::log(format!($($arg)*).as_str());
+        #[cfg(not(target_arch = "wasm32"))]
+        println!($($arg)*);
+    }};
+}

@@ -1,10 +1,10 @@
 use crate::game::card::SimpleFieldKind::Stack;
 use crate::game::card::{DirectoryCardType, FieldWidget, SimpleCard, SimpleField};
-use crate::log;
 use eframe::Frame;
 use egui::Context;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
+use crate::sprintln;
 
 pub trait ScreenWidget {
     fn update(&mut self, next_screen: Rc<RefCell<String>>, ctx: &Context, frame: &mut Frame);
@@ -25,15 +25,15 @@ impl ScreenWidget for MainMenu {
     fn update(&mut self, next_screen: Rc<RefCell<String>>, ctx: &Context, _frame: &mut Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             if ui.button("Start").clicked() {
-                log("setup started");
+                sprintln!("setup started");
                 *next_screen.borrow_mut() = String::from("game_setup");
             };
             if ui.button("Settings").clicked() {
-                log("settings opened");
+                sprintln!("settings opened");
                 *next_screen.borrow_mut() = String::from("settings");
             };
             if ui.button("Print Screen").clicked() {
-                log(&RefCell::borrow(&next_screen));
+                sprintln!("{}", next_screen.borrow());
             };
         });
     }
@@ -55,14 +55,22 @@ impl GameSetupScreen {
     }
     fn generate_config(&self) -> Option<GameConfig> {
         let directory = Rc::new(self.directory.borrow().clone()?);
-        let mut players: Vec<(String, SimpleField<SimpleCard<DirectoryCardType>>)> = (0..self.players)
-            .map(|i| (format!("{i}"), SimpleField::new().max_cards(6).selectable(true)))
+        let mut players: Vec<(String, SimpleField<SimpleCard<DirectoryCardType>>)> = (0..self
+            .players)
+            .map(|i| {
+                (
+                    format!("{i}"),
+                    SimpleField::new().max_cards(6).selectable(true),
+                )
+            })
             .collect();
         let mut stack = SimpleField::new().kind(Stack);
         for i in 0..directory.img_names.len() {
             let card = SimpleCard::new(i, Rc::clone(&directory));
             stack.push(card);
-            players[i%self.players].1.push(SimpleCard::new(i, Rc::clone(&directory)));
+            players[i % self.players]
+                .1
+                .push(SimpleCard::new(i, Rc::clone(&directory)));
         }
         Some(GameConfig {
             directory,
@@ -82,6 +90,7 @@ impl ScreenWidget for GameSetupScreen {
                 }
             });
             if ui.button("Select Directory").clicked() {
+                #[cfg(target_arch = "wasm32")]
                 DirectoryCardType::new_from_selection(Rc::clone(&self.directory));
             }
             ui.horizontal(|ui| {
@@ -107,7 +116,6 @@ impl ScreenWidget for GameSetupScreen {
                 }
             }
             if ui.button("Back").clicked() {
-                log("back to main menu");
                 *next_screen.borrow_mut() = String::from("main");
             }
         });
@@ -136,7 +144,7 @@ impl ScreenWidget for Game {
     fn update(&mut self, next_screen: Rc<RefCell<String>>, ctx: &Context, _frame: &mut Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             if ui.button("Exit").clicked() {
-                log("back to main menu");
+                sprintln!("back to main menu");
                 *next_screen.borrow_mut() = String::from("main");
             }
             ui.horizontal(|ui| {
@@ -179,10 +187,14 @@ impl ScreenWidget for Game {
             });
             ui.horizontal(|ui| {
                 ui.add(self.game_config.as_ref().unwrap().stack.draw());
-                ui.add(self.game_config.as_ref().unwrap().players[self.player_idx].1.draw());
+                ui.add(
+                    self.game_config.as_ref().unwrap().players[self.player_idx]
+                        .1
+                        .draw(),
+                );
             });
             if ui.button("Log something").clicked() {
-                log(format!("{}", self.game_config.as_ref().unwrap().stack.size).as_str());
+                sprintln!("{}", self.game_config.as_ref().unwrap().stack.size);
             }
         });
     }
