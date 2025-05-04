@@ -56,7 +56,7 @@ impl GameSetupScreen {
     fn generate_config(&self) -> Option<GameConfig> {
         let directory = Rc::new(self.directory.borrow().clone()?);
         let mut players: Vec<(String, SimpleField<SimpleCard<DirectoryCardType>>)> = (0..self.players)
-            .map(|i| (format!("{i}"), SimpleField::new().max_cards(6)))
+            .map(|i| (format!("{i}"), SimpleField::new().max_cards(6).selectable(true)))
             .collect();
         let mut stack = SimpleField::new().kind(Stack);
         for i in 0..directory.img_names.len() {

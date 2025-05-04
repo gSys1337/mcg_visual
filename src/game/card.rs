@@ -205,7 +205,10 @@ impl<C: CardWidget> SimpleField<C> {
                 let x = if cards <= self.max_cards {
                     (self.size.x + self.margin as f32) * (idx as f32)
                 } else {
-                    (self.size.x + self.margin as f32) * (idx as f32) * ((self.max_cards - 1) as f32) / ((cards - 1) as f32)
+                    (self.size.x + self.margin as f32)
+                        * (idx as f32)
+                        * ((self.max_cards - 1) as f32)
+                        / ((cards - 1) as f32)
                 };
                 egui::Vec2::new(x, 0.0)
             }
@@ -213,14 +216,12 @@ impl<C: CardWidget> SimpleField<C> {
     }
     fn draw_stack(&self, ui: &mut egui::Ui) -> egui::Response {
         ui.set_min_size(self.size);
-        let origin = ui.next_widget_position().add(egui::vec2(
-            0.0,
-            self.size.y / 2.0 + self.max_cards as f32,
-        ));
-        let content_size = self.size.add(egui::vec2(
-            self.max_cards as f32,
-            self.max_cards as f32,
-        ));
+        let origin = ui
+            .next_widget_position()
+            .add(egui::vec2(0.0, self.size.y / 2.0 + self.max_cards as f32));
+        let content_size = self
+            .size
+            .add(egui::vec2(self.max_cards as f32, self.max_cards as f32));
         ui.set_min_size(content_size);
         for (idx, card) in self.cards.iter().enumerate() {
             let img = card.img();
@@ -228,10 +229,7 @@ impl<C: CardWidget> SimpleField<C> {
                 img.paint_at(
                     ui,
                     egui::Rect::from_min_size(
-                        origin.add(
-                            self.card_pos(idx)
-                                .add(egui::vec2(0.0, -size.y)),
-                        ),
+                        origin.add(self.card_pos(idx).add(egui::vec2(0.0, -size.y))),
                         size,
                     ),
                 );
@@ -245,23 +243,70 @@ impl<C: CardWidget> SimpleField<C> {
             0.0,
         ));
         ui.set_min_size(content_size);
-        let origin = ui.next_widget_position().add(egui::vec2(
-            0.0,
-            self.size.y / 2.0,
-        ));
-        for (idx, card) in self.cards.iter().enumerate() {
+        let origin = ui
+            .next_widget_position()
+            .add(egui::vec2(0.0, self.size.y / 2.0));
+        let pointer_pos = ui.input(|state| state.pointer.latest_pos());
+        let rect = ui.min_rect();
+        let selection: Option<usize> = if pointer_pos.is_some()
+            && rect.contains(pointer_pos.unwrap())
+        {
+            let max = if self.cards.len() > self.max_cards {
+                rect.right() - rect.left()
+            } else {
+                self.cards.len() as f32 * (self.size.x + self.margin as f32) - self.margin as f32
+            };
+            Some((self.cards.len() as f32 * (pointer_pos.unwrap().x - rect.left()) / max) as usize)
+        } else {
+            None
+        };
+        let (normal, selected): (Vec<(usize, &C)>, Vec<(usize, &C)>) =
+            self.cards.iter().enumerate().partition(|(i, _)| {
+                !(self.selectable && (selection.is_some() && selection.unwrap() == *i))
+            });
+        for (idx, card) in normal {
             let img = card.img();
             if let Some(size) = img.load_and_calc_size(ui, self.size) {
                 img.paint_at(
                     ui,
                     egui::Rect::from_min_size(
-                        origin.add(
-                            self.card_pos(idx)
-                                .add(egui::vec2(0.0, -size.y)),
-                        ),
+                        origin.add(self.card_pos(idx).add(egui::vec2(0.0, -size.y))),
                         size,
                     ),
                 );
+            }
+        }
+        for (idx, card) in selected {
+            let img = card.img();
+            if let Some(size) = img.load_and_calc_size(ui, self.size) {
+                egui::Area::new(ui.next_auto_id())
+                    .fixed_pos(
+                        origin
+                            .add(self.card_pos(idx))
+                            .add(egui::vec2(0.0, -size.y))
+                            .add(egui::vec2(0.0, -self.margin as f32)),
+                    )
+                    .show(ui.ctx(), |ui| {
+                        egui::Frame::new()
+                            .stroke(egui::Stroke::new(2.0, egui::Color32::RED))
+                            .corner_radius(egui::CornerRadius::same(2))
+                            .show(ui, |ui| {
+                                ui.set_min_size(size);
+                                img.paint_at(
+                                    ui,
+                                    egui::Rect::from_min_size(
+                                        origin
+                                            .add(self.card_pos(idx))
+                                            .add(egui::vec2(0.0, -size.y))
+                                            .add(egui::vec2(
+                                                self.margin as f32 / 2.0,
+                                                -self.margin as f32 / 2.0,
+                                            )),
+                                        size,
+                                    ),
+                                );
+                            });
+                    });
             }
         }
         ui.response()
