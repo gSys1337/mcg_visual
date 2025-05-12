@@ -1,0 +1,246 @@
+use crate::game::card::{CardConfig, CardEncoding};
+use crate::game::screen::DNDSelector;
+use eframe::emath::{vec2, Rect};
+use egui::frame;
+use std::fmt::{Debug, Formatter};
+use std::ops::Add;
+use std::rc::Rc;
+
+#[derive(Debug)]
+pub enum SimpleFieldKind {
+    Stack,
+    Horizontal,
+}
+
+pub trait FieldWidget {
+    fn draw(&self) -> impl egui::Widget;
+}
+#[allow(dead_code)]
+pub struct SimpleField<E: CardEncoding, C: CardConfig> {
+    pub(crate) cards: Vec<E>,
+    pub(crate) card_config: Rc<C>,
+    kind: SimpleFieldKind,
+    margin: i8,
+    max_cards: usize,
+    selectable: bool,
+    sense: egui::Sense,
+}
+/// Builder
+impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
+    pub fn new(card_config: Rc<C>) -> Self {
+        Self {
+            cards: vec![],
+            card_config,
+            kind: SimpleFieldKind::Horizontal,
+            margin: 4,
+            max_cards: 5,
+            selectable: false,
+            sense: egui::Sense::empty(),
+        }
+    }
+    pub fn from_collection(card_config: Rc<C>, cards: impl IntoIterator<Item = E>) -> Self {
+        SimpleField {
+            cards: cards.into_iter().collect(),
+            ..SimpleField::new(card_config)
+        }
+    }
+    pub fn max_cards(self, max_cards: usize) -> Self {
+        SimpleField { max_cards, ..self }
+    }
+    pub fn kind(self, kind: SimpleFieldKind) -> Self {
+        SimpleField { kind, ..self }
+    }
+    pub fn margin(self, margin: i8) -> Self {
+        SimpleField { margin, ..self }
+    }
+    pub fn selectable(self, selectable: bool) -> Self {
+        SimpleField { selectable, ..self }
+    }
+    pub fn sense(self, sense: egui::Sense) -> Self {
+        SimpleField { sense, ..self }
+    }
+}
+impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
+    fn card_pos(&self, idx: usize) -> egui::Vec2 {
+        match self.kind {
+            SimpleFieldKind::Stack => {
+                let x = if idx <= self.max_cards {
+                    idx as f32
+                } else {
+                    self.max_cards as f32
+                };
+                egui::Vec2::new(x, -x)
+            }
+            SimpleFieldKind::Horizontal => {
+                let cards = self.cards.len();
+                let x = if cards <= self.max_cards {
+                    (self.card_config.natural_size().x + self.margin as f32) * (idx as f32)
+                } else {
+                    (self.card_config.natural_size().x + self.margin as f32)
+                        * (idx as f32)
+                        * ((self.max_cards - 1) as f32)
+                        / ((cards - 1) as f32)
+                };
+                egui::Vec2::new(x, 0.0)
+            }
+        }
+    }
+    fn draw_stack(&self, ui: &mut egui::Ui) -> egui::Response {
+        ui.set_min_size(self.card_config.natural_size());
+        let origin = ui.cursor().left_top().add(vec2(0.0, self.max_cards as f32));
+        let content_size = self
+            .card_config
+            .natural_size()
+            .add(vec2(self.max_cards as f32, self.max_cards as f32));
+        ui.set_min_size(content_size);
+        for (idx, card) in self.cards.iter().enumerate() {
+            self.card_config.img(card).paint_at(
+                ui,
+                Rect::from_min_size(
+                    origin.add(self.card_pos(idx)),
+                    self.card_config.natural_size(),
+                ),
+            );
+        }
+        let mut response = None;
+        if let Some(card) = self.cards.last() {
+            ui.allocate_new_ui(
+                egui::UiBuilder::new().max_rect(Rect::from_min_size(
+                    origin.add(self.card_pos(self.cards.len())),
+                    self.card_config.natural_size(),
+                )),
+                |ui| {
+                    response = Some(ui.dnd_drag_source(
+                        ui.next_auto_id(),
+                        DNDSelector::Stack,
+                        |ui| ui.add(self.card_config.img(card)),
+                    ));
+                },
+            );
+        }
+        if let Some(response) = response {
+            if let Some(_payload) = response.response.dnd_release_payload::<DNDSelector>() {
+                //sprintln!("Something dropped: {_payload:?}");
+            }
+        }
+        ui.response()
+    }
+    fn draw_horizontal(&self, ui: &mut egui::Ui) -> egui::Response {
+        let content_size = self.card_config.natural_size().add(vec2(
+            (self.max_cards as f32 - 1.0)
+                * (self.card_config.natural_size().x + self.margin as f32),
+            self.margin as f32,
+        ));
+        ui.set_min_size(content_size);
+        let origin = ui.cursor().left_top().add(vec2(0.0, self.margin as f32));
+        let pointer_pos = ui.input(|state| state.pointer.latest_pos());
+        let rect = ui.min_rect();
+        let selection: Option<usize> = if pointer_pos.is_some()
+            && rect.contains(pointer_pos.unwrap())
+        {
+            let max = if self.cards.len() > self.max_cards {
+                rect.right() - rect.left()
+            } else {
+                self.cards.len() as f32 * (self.card_config.natural_size().x + self.margin as f32)
+                    - self.margin as f32
+            };
+            Some((self.cards.len() as f32 * (pointer_pos.unwrap().x - rect.left()) / max) as usize)
+        } else {
+            None
+        };
+        type Partition<'a, E> = (Vec<(usize, &'a E)>, Vec<(usize, &'a E)>);
+        let (normal, selected): Partition<E> = self.cards.iter().enumerate().partition(|(i, _)| {
+            let _true_selection =
+                !(self.selectable && (selection.is_some() && selection.unwrap() == *i));
+            true
+        });
+        for (idx, card) in normal {
+            self.card_config.img(card).paint_at(
+                ui,
+                Rect::from_min_size(
+                    origin.add(self.card_pos(idx)),
+                    self.card_config.natural_size(),
+                ),
+            );
+        }
+        for (idx, card) in selected {
+            let img = self.card_config.img(card);
+            egui::Area::new(ui.next_auto_id())
+                .fixed_pos(
+                    origin
+                        .add(self.card_pos(idx))
+                        .add(vec2(0.0, -self.margin as f32)),
+                )
+                .show(ui.ctx(), |ui| {
+                    egui::Frame::new()
+                        .stroke(egui::Stroke::new(2.0, egui::Color32::RED))
+                        .corner_radius(egui::CornerRadius::same(2))
+                        .show(ui, |ui| {
+                            ui.set_min_size(self.card_config.natural_size());
+                            img.paint_at(
+                                ui,
+                                Rect::from_min_size(
+                                    ui.cursor().left_top(),
+                                    self.card_config.natural_size(),
+                                ),
+                            );
+                        });
+                });
+        }
+        // if let Some(idx) = selection {
+        //     let card = &self.cards[idx];
+        //     if let Some(size) = card.img().load_and_calc_size(ui, self.size) {
+        //         ui.allocate_new_ui(
+        //             egui::UiBuilder::new().max_rect(Rect::from_min_size(
+        //                 origin.add(self.card_pos(idx)),
+        //                 size,
+        //             )),
+        //             |ui| {
+        //                 sprintln!("dnd source here");
+        //                 ui.dnd_drag_source(ui.next_auto_id(), DNDSelector::Player(0, idx), |ui| {
+        //                     ui.add(card.img())
+        //                 });
+        //             },
+        //         );
+        //     }
+        // }
+        ui.response()
+    }
+    pub fn push(&mut self, card: E) {
+        self.cards.push(card);
+    }
+    pub fn remove(&mut self, idx: usize) -> E {
+        self.cards.remove(idx)
+    }
+    pub fn pop(&mut self) -> Option<E> {
+        self.cards.pop()
+    }
+    pub fn insert(&mut self, idx: usize, card: E) {
+        self.cards.insert(idx, card);
+    }
+}
+impl<E: CardEncoding, C: CardConfig> FieldWidget for SimpleField<E, C> {
+    fn draw(&self) -> impl egui::Widget {
+        move |ui: &mut egui::Ui| -> egui::Response {
+            frame::Frame::new()
+                .inner_margin(egui::Margin::same(self.margin))
+                .stroke(egui::Stroke::new(2.0, egui::Color32::DEBUG_COLOR))
+                .fill(egui::Color32::DARK_GREEN)
+                .corner_radius(egui::CornerRadius::same(self.margin.unsigned_abs()))
+                .show(ui, |ui| match self.kind {
+                    SimpleFieldKind::Stack => self.draw_stack(ui),
+                    SimpleFieldKind::Horizontal => self.draw_horizontal(ui),
+                })
+                .response
+        }
+    }
+}
+impl<E: CardEncoding + Debug, C: CardConfig + Debug> Debug for SimpleField<E, C> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SimpleField")
+            .field("kind", &self.kind)
+            .field("card_config", &self.card_config)
+            .field("cards", &self.cards)
+            .finish()
+    }
+}
