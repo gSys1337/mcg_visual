@@ -8,6 +8,7 @@ pub mod screen;
 use screen::{MainMenu, ScreenWidget};
 
 pub struct App {
+    // TODO Make custom struct of this HashMap so that screens can dynamically register other screens
     screens: HashMap<String, Rc<RefCell<dyn ScreenWidget>>>,
     default_screen: Rc<RefCell<dyn ScreenWidget>>,
     current_screen: Rc<RefCell<String>>,
@@ -47,11 +48,6 @@ impl App {
     }
 }
 
-// use egui::FontFamily::Proportional;
-// use egui::FontId;
-// use egui::TextStyle::*;
-// use std::collections::BTreeMap;
-
 impl eframe::App for App {
     fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
         let current_screen = match self.screens.get_mut(&self.current_screen.borrow().clone()) {
@@ -60,9 +56,13 @@ impl eframe::App for App {
         };
         let next_screen = Rc::clone(&self.current_screen);
         current_screen.borrow_mut().update(next_screen, ctx, frame);
+        // TODO Create custom screen for text sizes
+        // use egui::FontFamily::Proportional;
+        // use egui::FontId;
+        // use egui::TextStyle::*;
+        // use std::collections::BTreeMap;
         // egui::CentralPanel::default().show(ctx, |ui| {
         //     let size = 30.0;
-        //     // TODO move text size into settings
         //     let text_styles: BTreeMap<_, _> = [
         //         (Heading, FontId::new(size, Proportional)),
         //         (Name("Heading2".into()), FontId::new(size, Proportional)),
@@ -75,5 +75,6 @@ impl eframe::App for App {
         //     .into();
         //     // Mutate global styles with new text styles
         //     ctx.all_styles_mut(move |style| style.text_styles = text_styles.clone());
+        // }
     }
 }

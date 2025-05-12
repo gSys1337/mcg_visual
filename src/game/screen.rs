@@ -292,12 +292,14 @@ impl ScreenWidget for CardsTestDND {
             ui.label("Stack");
             let stack = &self.game_config.as_ref().unwrap().stack;
             if let Some(payload) = ui.add(stack.draw()).dnd_release_payload::<DNDSelector>() {
-                sprintln!("{:?}", payload);
+                sprintln!("Received Payload in CardsTestDND over the Stack");
+                sprintln!("Payload: {payload:?}");
             }
             let (name_0, field_0) = &self.game_config.as_ref().unwrap().players[0];
             ui.label(name_0);
             if let Some(payload) = ui.add(field_0.draw()).dnd_release_payload::<DNDSelector>() {
-                sprintln!("Payload: {:?}", payload);
+                sprintln!("Received Payload in CardsTestDND over the first Field");
+                sprintln!("Payload: {payload:?}");
                 let idx = self.game_config.as_ref().unwrap().players[0].1.cards.len();
                 if self.game_config.is_some() {
                     sprintln!("Field 0 length: {}", field_0.cards.len());
@@ -310,7 +312,8 @@ impl ScreenWidget for CardsTestDND {
             let (name_1, field_1) = &self.game_config.as_ref().unwrap().players[1];
             ui.label(name_1);
             if let Some(payload) = ui.add(field_1.draw()).dnd_release_payload::<DNDSelector>() {
-                sprintln!("{:?}", payload);
+                sprintln!("Received Payload in CardsTestDND over the second Field");
+                sprintln!("Payload: {payload:?}");
             }
         });
     }
@@ -351,11 +354,12 @@ impl<C: CardConfig + Clone, G> GameSetupScreen<C, G> {
                     format!("{i}"),
                     SimpleField::new(Rc::clone(&directory))
                         .max_cards(4)
-                        .selectable(true),
+                        .selectable(true)
+                        .max_card_size(vec2(100.0, 150.0)),
                 )
             })
             .collect();
-        let mut stack = SimpleField::new(Rc::clone(&directory)).kind(Stack);
+        let mut stack = SimpleField::new(Rc::clone(&directory)).kind(Stack).max_card_size(vec2(100.0, 150.0));
         for i in 0..directory.T() {
             let card = SimpleCard::Open(i);
             stack.push(card);

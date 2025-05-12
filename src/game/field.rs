@@ -179,7 +179,6 @@ impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
                 ),
             );
         }
-        let mut response = None;
         if self.draggable && !self.cards.is_empty() {
             let card = self.cards.last().expect("Tested for emptiness");
             ui.allocate_new_ui(
@@ -189,21 +188,23 @@ impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
                 )),
                 |ui| {
                     // TODO Ignore this response and instead use ui.response() to receive payloads
-                    response = Some(ui.dnd_drag_source(
+                    ui.dnd_drag_source(
                         ui.next_auto_id(),
                         DNDSelector::Stack,
                         |ui| ui.add(self.card_config.img(card)),
-                    ));
+                    ).response.dnd_release_payload::<DNDSelector>().iter().for_each(|payload| {
+                        sprintln!("Received Payload in {:?} over dnd_drag_source", self.kind);
+                        sprintln!("Payload: {payload:?}");
+                    });
                 },
             );
         }
-        if let Some(response) = response {
-            if let Some(payload) = response.response.dnd_release_payload::<DNDSelector>() {
-                sprintln!("Received Payload in {:?}", self.kind);
-                sprintln!("Payload: {payload:?}");
-            }
+        let response = ui.response();
+        if let Some(payload) = response.dnd_release_payload::<DNDSelector>() {
+            sprintln!("Received Payload in {:?}", self.kind);
+            sprintln!("Payload: {payload:?}");
         }
-        ui.response()
+        response
     }
     fn draw_horizontal(&self, ui: &mut egui::Ui) -> egui::Response {
         ui.set_min_size(self.content_size());
