@@ -9,18 +9,6 @@ use std::rc::{Rc, Weak};
 pub trait ScreenWidget {
     fn update(&mut self, next_screen: Rc<RefCell<String>>, ctx: &Context, frame: &mut Frame);
 }
-
-pub struct MainMenu {}
-impl Default for MainMenu {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-impl MainMenu {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
 impl ScreenWidget for MainMenu {
     fn update(&mut self, next_screen: Rc<RefCell<String>>, ctx: &Context, _frame: &mut Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -44,43 +32,6 @@ impl ScreenWidget for MainMenu {
                 sprintln!("{}", next_screen.borrow());
             };
         });
-    }
-}
-
-pub struct GameSetupScreen<C: CardConfig = DirectoryCardType, G = Game<C>> {
-    directory: Rc<RefCell<Option<C>>>,
-    players: usize,
-    pub(crate) game_widget: Weak<RefCell<G>>,
-}
-impl<C: CardConfig + Clone, G> GameSetupScreen<C, G> {
-    pub fn new(game_widget: Weak<RefCell<G>>) -> Self {
-        let directory = Rc::new(RefCell::new(None));
-        let players = 2;
-        Self {
-            directory,
-            players,
-            game_widget,
-        }
-    }
-    fn generate_config(&self) -> Option<GameConfig<C>> {
-        let directory = Rc::new(self.directory.borrow().clone()?);
-        let mut players: Vec<(String, SimpleField<SimpleCard, C>)> = (0..self.players)
-            .map(|i| {
-                (
-                    format!("{i}"),
-                    SimpleField::new(Rc::clone(&directory))
-                        .max_cards(4)
-                        .selectable(true),
-                )
-            })
-            .collect();
-        let mut stack = SimpleField::new(Rc::clone(&directory)).kind(Stack);
-        for i in 0..directory.T() {
-            let card = SimpleCard::Open(i);
-            stack.push(card);
-            players[i % self.players].1.push(SimpleCard::Open(i));
-        }
-        Some(GameConfig { players, stack })
     }
 }
 impl ScreenWidget for GameSetupScreen {
@@ -123,26 +74,6 @@ impl ScreenWidget for GameSetupScreen {
                 *next_screen.borrow_mut() = String::from("main");
             }
         });
-    }
-}
-
-pub struct Game<C: CardConfig> {
-    pub(crate) game_config: Option<GameConfig<C>>,
-    image_idx: usize,
-    player_idx: usize,
-}
-impl<C: CardConfig> Default for Game<C> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-impl<C: CardConfig> Game<C> {
-    pub fn new() -> Self {
-        Self {
-            game_config: None,
-            image_idx: 0,
-            player_idx: 0,
-        }
     }
 }
 impl ScreenWidget for Game<DirectoryCardType> {
@@ -209,48 +140,6 @@ impl ScreenWidget for Game<DirectoryCardType> {
                 );
             });
         });
-    }
-}
-
-pub struct GameConfig<C: CardConfig> {
-    players: Vec<(String, SimpleField<SimpleCard, C>)>,
-    stack: SimpleField<SimpleCard, C>,
-}
-impl<C: CardConfig> GameConfig<C> {
-    pub fn move_card<E: CardEncoding>(&mut self, src: DNDSelector, dst: DNDSelector) {
-        if src == dst {
-            return;
-        }
-        let card = match src {
-            DNDSelector::Player(p_idx, c_idx) => self.players[p_idx].1.remove(c_idx),
-            DNDSelector::Stack => self.stack.cards.pop().unwrap(),
-        };
-        match dst {
-            DNDSelector::Player(p_idx, c_idx) => self.players[p_idx].1.insert(c_idx, card),
-            DNDSelector::Stack => self.stack.cards.push(card),
-        };
-    }
-}
-
-pub struct DNDTest {
-    columns: Vec<Vec<String>>,
-}
-impl Default for DNDTest {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-impl DNDTest {
-    pub fn new() -> Self {
-        let columns = vec![
-            vec!["Item A", "Item B", "Item C", "Item D"],
-            vec!["Item E", "Item F", "Item G"],
-            vec!["Item H", "Item I", "Item J", "Item K"],
-        ]
-        .into_iter()
-        .map(|v| v.into_iter().map(ToString::to_string).collect())
-        .collect();
-        DNDTest { columns }
     }
 }
 impl ScreenWidget for DNDTest {
@@ -349,30 +238,6 @@ impl ScreenWidget for DNDTest {
         });
     }
 }
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct Location {
-    col: usize,
-    row: usize,
-}
-
-pub struct CardsTestDND {
-    pub(crate) game_config: Option<GameConfig<DirectoryCardType>>,
-}
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub enum DNDSelector {
-    Player(usize, usize),
-    Stack,
-}
-impl Default for CardsTestDND {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-impl CardsTestDND {
-    pub fn new() -> Self {
-        CardsTestDND { game_config: None }
-    }
-}
 impl ScreenWidget for GameSetupScreen<DirectoryCardType, CardsTestDND> {
     fn update(&mut self, next_screen: Rc<RefCell<String>>, ctx: &Context, _frame: &mut Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -448,5 +313,140 @@ impl ScreenWidget for CardsTestDND {
                 sprintln!("{:?}", payload);
             }
         });
+    }
+}
+
+pub struct MainMenu {}
+impl MainMenu {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+impl Default for MainMenu {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+pub struct GameSetupScreen<C: CardConfig = DirectoryCardType, G = Game<C>> {
+    directory: Rc<RefCell<Option<C>>>,
+    players: usize,
+    pub(crate) game_widget: Weak<RefCell<G>>,
+}
+impl<C: CardConfig + Clone, G> GameSetupScreen<C, G> {
+    pub fn new(game_widget: Weak<RefCell<G>>) -> Self {
+        let directory = Rc::new(RefCell::new(None));
+        let players = 2;
+        Self {
+            directory,
+            players,
+            game_widget,
+        }
+    }
+    fn generate_config(&self) -> Option<GameConfig<C>> {
+        let directory = Rc::new(self.directory.borrow().clone()?);
+        let mut players: Vec<(String, SimpleField<SimpleCard, C>)> = (0..self.players)
+            .map(|i| {
+                (
+                    format!("{i}"),
+                    SimpleField::new(Rc::clone(&directory))
+                        .max_cards(4)
+                        .selectable(true),
+                )
+            })
+            .collect();
+        let mut stack = SimpleField::new(Rc::clone(&directory)).kind(Stack);
+        for i in 0..directory.T() {
+            let card = SimpleCard::Open(i);
+            stack.push(card);
+            players[i % self.players].1.push(SimpleCard::Open(i));
+        }
+        Some(GameConfig { players, stack })
+    }
+}
+
+pub struct Game<C: CardConfig> {
+    pub(crate) game_config: Option<GameConfig<C>>,
+    image_idx: usize,
+    player_idx: usize,
+}
+impl<C: CardConfig> Game<C> {
+    pub fn new() -> Self {
+        Self {
+            game_config: None,
+            image_idx: 0,
+            player_idx: 0,
+        }
+    }
+}
+impl<C: CardConfig> Default for Game<C> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+pub struct GameConfig<C: CardConfig> {
+    players: Vec<(String, SimpleField<SimpleCard, C>)>,
+    stack: SimpleField<SimpleCard, C>,
+}
+impl<C: CardConfig> GameConfig<C> {
+    pub fn move_card<E: CardEncoding>(&mut self, src: DNDSelector, dst: DNDSelector) {
+        if src == dst {
+            return;
+        }
+        let card = match src {
+            DNDSelector::Player(p_idx, c_idx) => self.players[p_idx].1.remove(c_idx),
+            DNDSelector::Stack => self.stack.cards.pop().unwrap(),
+        };
+        match dst {
+            DNDSelector::Player(p_idx, c_idx) => self.players[p_idx].1.insert(c_idx, card),
+            DNDSelector::Stack => self.stack.cards.push(card),
+        };
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Location {
+    col: usize,
+    row: usize,
+}
+pub struct DNDTest {
+    columns: Vec<Vec<String>>,
+}
+impl DNDTest {
+    pub fn new() -> Self {
+        let columns = vec![
+            vec!["Item A", "Item B", "Item C", "Item D"],
+            vec!["Item E", "Item F", "Item G"],
+            vec!["Item H", "Item I", "Item J", "Item K"],
+        ]
+            .into_iter()
+            .map(|v| v.into_iter().map(ToString::to_string).collect())
+            .collect();
+        DNDTest { columns }
+    }
+}
+impl Default for DNDTest {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum DNDSelector {
+    Player(usize, usize),
+    Stack,
+}
+pub struct CardsTestDND {
+    pub(crate) game_config: Option<GameConfig<DirectoryCardType>>,
+}
+impl CardsTestDND {
+    pub fn new() -> Self {
+        CardsTestDND { game_config: None }
+    }
+}
+impl Default for CardsTestDND {
+    fn default() -> Self {
+        Self::new()
     }
 }

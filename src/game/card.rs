@@ -22,14 +22,6 @@ pub trait CardEncoding {
     fn mask(self) -> Self;
     fn open(self) -> Self;
 }
-#[derive(Hash, Debug)]
-pub enum SimpleCard {
-    /// You are supposed to ensure your card isn't outside its type bounds!
-    /// e.g. assert!(t < T)
-    Open(usize),
-    /// You don't have to specify which type this card *really* is
-    Masked(Option<usize>),
-}
 impl CardEncoding for SimpleCard {
     fn t(&self) -> Option<usize> {
         match self {
@@ -54,6 +46,16 @@ impl CardEncoding for SimpleCard {
     }
 }
 
+#[derive(Hash, Debug)]
+pub enum SimpleCard {
+    /// You are supposed to ensure your card isn't outside its type bounds!
+    /// e.g. assert!(t < T)
+    Open(usize),
+    /// You don't have to specify which type this card *really* is
+    Masked(Option<usize>),
+}
+
+// TODO make CardEncoding be usable as Idx for Trait Index
 #[allow(non_snake_case)]
 pub trait CardConfig {
     fn img(&self, t: &impl CardEncoding) -> Image;
@@ -71,6 +73,28 @@ pub trait CardConfig {
         area.show(ui.ctx(), |ui| ui.add(self.img(t)))
     }
 }
+impl CardConfig for DirectoryCardType {
+    fn img(&self, t: &impl CardEncoding) -> Image {
+        let path = format!(
+            "http://127.0.0.1:8080/media/{folder}/{card}",
+            folder = self.path,
+            card = self.img_names[t.t().unwrap_or(0)]
+        );
+        Image::new(path)
+            .show_loading_spinner(true)
+            .maintain_aspect_ratio(true)
+    }
+    #[allow(non_snake_case)]
+    fn T(&self) -> usize {
+        self.T
+    }
+    fn w(&self) -> u32 {
+        self.w
+    }
+    fn natural_size(&self) -> Vec2 {
+        self.natural_size
+    }
+}
 
 #[derive(Clone)]
 #[allow(non_snake_case)]
@@ -80,15 +104,6 @@ pub struct DirectoryCardType {
     pub(crate) T: usize,
     pub(crate) w: u32,
     pub(crate) natural_size: Vec2,
-}
-impl Debug for DirectoryCardType {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("DirectoryCardType")
-            .field("path", &self.path)
-            .field("T", &self.T)
-            .field("natural_size", &self.natural_size)
-            .finish()
-    }
 }
 impl DirectoryCardType {
     /// It's assumed the image URL is inside servers /media directory and the
@@ -157,25 +172,12 @@ impl DirectoryCardType {
         self.img_names.iter()
     }
 }
-impl CardConfig for DirectoryCardType {
-    fn img(&self, t: &impl CardEncoding) -> Image {
-        let path = format!(
-            "http://127.0.0.1:8080/media/{folder}/{card}",
-            folder = self.path,
-            card = self.img_names[t.t().unwrap_or(0)]
-        );
-        Image::new(path)
-            .show_loading_spinner(true)
-            .maintain_aspect_ratio(true)
-    }
-    #[allow(non_snake_case)]
-    fn T(&self) -> usize {
-        self.T
-    }
-    fn w(&self) -> u32 {
-        self.w
-    }
-    fn natural_size(&self) -> Vec2 {
-        self.natural_size
+impl Debug for DirectoryCardType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DirectoryCardType")
+            .field("path", &self.path)
+            .field("T", &self.T)
+            .field("natural_size", &self.natural_size)
+            .finish()
     }
 }
