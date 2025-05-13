@@ -289,31 +289,40 @@ impl ScreenWidget for CardsTestDND {
             if self.game_config.is_none() {
                 return;
             }
-            ui.label("Stack");
-            let stack = &self.game_config.as_ref().unwrap().stack;
-            if let Some(payload) = ui.add(stack.draw()).dnd_release_payload::<DNDSelector>() {
-                sprintln!("Received Payload in CardsTestDND over the Stack");
-                sprintln!("Payload: {payload:?}");
-            }
-            let (name_0, field_0) = &self.game_config.as_ref().unwrap().players[0];
-            ui.label(name_0);
-            if let Some(payload) = ui.add(field_0.draw()).dnd_release_payload::<DNDSelector>() {
-                sprintln!("Received Payload in CardsTestDND over the first Field");
-                sprintln!("Payload: {payload:?}");
-                let idx = self.game_config.as_ref().unwrap().players[0].1.cards.len();
-                if self.game_config.is_some() {
-                    sprintln!("Field 0 length: {}", field_0.cards.len());
+            if let Some(cfg) = self.game_config.as_mut() {
+                ui.label("Stack");
+                let stack = &cfg.stack;
+                if let Some(payload) = ui.add(stack.draw()).dnd_release_payload::<DNDSelector>() {
+                    sprintln!("Received Payload in CardsTestDND over the Stack");
+                    sprintln!("Payload: {payload:?}");
                 }
-                if let Some(cfg) = std::borrow::BorrowMut::borrow_mut(&mut self.game_config) {
-                    sprintln!("{:?}", (*payload, DNDSelector::Player(0, idx)));
-                    cfg.move_card::<SimpleCard>(*payload, DNDSelector::Player(0, idx));
+                let payload = *stack.payload.borrow();
+                if let Some((payload, _)) = payload {
+                    *stack.payload.borrow_mut() = None;
+                    cfg.move_card::<SimpleCard>(payload, DNDSelector::Stack);
                 }
-            }
-            let (name_1, field_1) = &self.game_config.as_ref().unwrap().players[1];
-            ui.label(name_1);
-            if let Some(payload) = ui.add(field_1.draw()).dnd_release_payload::<DNDSelector>() {
-                sprintln!("Received Payload in CardsTestDND over the second Field");
-                sprintln!("Payload: {payload:?}");
+                let (name_0, field_0) = &cfg.players[0];
+                ui.label(name_0);
+                if let Some(payload) = ui.add(field_0.draw()).dnd_release_payload::<DNDSelector>() {
+                    sprintln!("Received Payload in CardsTestDND over the first Field");
+                    sprintln!("Payload: {payload:?}");
+                }
+                let payload = *field_0.payload.borrow();
+                if let Some((payload, dst_idx)) = payload {
+                    *field_0.payload.borrow_mut() = None;
+                    cfg.move_card::<SimpleCard>(payload, DNDSelector::Player(0, dst_idx));
+                }
+                let (name_1, field_1) = &cfg.players[1];
+                ui.label(name_1);
+                if let Some(payload) = ui.add(field_1.draw()).dnd_release_payload::<DNDSelector>() {
+                    sprintln!("Received Payload in CardsTestDND over the second Field");
+                    sprintln!("Payload: {payload:?}");
+                }
+                let payload = *field_1.payload.borrow();
+                if let Some((payload, dst_idx)) = payload {
+                    *field_1.payload.borrow_mut() = None;
+                    cfg.move_card::<SimpleCard>(payload, DNDSelector::Player(1, dst_idx));
+                }
             }
         });
     }

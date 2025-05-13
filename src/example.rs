@@ -4,6 +4,7 @@ use rand::Rng;
 use std::fmt;
 use std::ops::Add;
 
+// TODO move this module into mcg_visual::card or make it a module inside mcg_visual::card
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub struct ConventionalCard {
     pub suit: Suit,
@@ -204,6 +205,7 @@ impl Iterator for RankIter {
         current
     }
 }
+// TODO check if this version of Stack can be safely removed
 pub struct Stack {
     pub cards: Vec<()>,
     pub pos: egui::Pos2,
@@ -267,6 +269,7 @@ impl Stack {
             .inner
     }
 }
+// TODO check if this version of HandLayout can be safely removed
 pub struct HandLayout {
     pub cards: Vec<()>,
     pub pos: egui::Pos2,

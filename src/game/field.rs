@@ -1,8 +1,9 @@
+use std::cell::RefCell;
 use crate::game::card::SimpleCard::Open;
 use crate::game::card::{CardConfig, CardEncoding};
 use crate::game::screen::DNDSelector;
 use eframe::emath::{vec2, Rect};
-use egui::{frame, Vec2};
+use egui::{frame, Color32, Vec2};
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
 use std::rc::Rc;
@@ -16,8 +17,8 @@ impl<E: CardEncoding, C: CardConfig> FieldWidget for SimpleField<E, C> {
         move |ui: &mut egui::Ui| -> egui::Response {
             frame::Frame::new()
                 .inner_margin(egui::Margin::same(self.margin))
-                .stroke(egui::Stroke::new(2.0, egui::Color32::DEBUG_COLOR))
-                .fill(egui::Color32::DARK_GREEN)
+                .stroke(egui::Stroke::new(2.0, Color32::DEBUG_COLOR))
+                .fill(Color32::DARK_GREEN)
                 .corner_radius(egui::CornerRadius::same(self.margin.unsigned_abs()))
                 .show(ui, |ui| match self.kind {
                     SimpleFieldKind::Stack => self.draw_stack(ui),
@@ -37,13 +38,15 @@ pub enum SimpleFieldKind {
 #[allow(dead_code)]
 pub struct SimpleField<E: CardEncoding, C: CardConfig> {
     pub(crate) card_config: Rc<C>,
-    max_card_size: Option<Vec2>,
     pub(crate) cards: Vec<E>,
     pub kind: SimpleFieldKind,
     pub margin: i8,
     pub max_cards: usize,
     pub selectable: bool,
     pub draggable: bool,
+    max_card_size: Option<Vec2>,
+    // TODO Adjust DNDSelector to a (&SimpleField, Option<Idx>) if possible
+    pub(crate) payload: RefCell<Option<(DNDSelector, usize)>>
 }
 /// Builder
 impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
@@ -57,6 +60,7 @@ impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
             selectable: true,
             draggable: true,
             max_card_size: None,
+            payload: RefCell::new(None)
         }
     }
     pub fn from_collection(card_config: Rc<C>, cards: impl IntoIterator<Item = E>) -> Self {
@@ -127,11 +131,20 @@ impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
         self.cards.pop()
     }
     pub fn insert(&mut self, idx: usize, card: E) {
-        self.cards.insert(idx, card);
+        if idx >= self.cards.len() {
+            self.cards.push(card);
+        } else {
+            self.cards.insert(idx, card);
+        }
     }
 }
 /// Internal
 impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
+    fn horizontal_drag_size(&self) -> Vec2 {
+        let mut size = self.get_card_size();
+        size.x = self.card_pos(1).x - self.card_pos(0).x;
+        size
+    }
     fn content_size(&self) -> Vec2 {
         match self.kind {
             SimpleFieldKind::Stack => self
@@ -187,14 +200,15 @@ impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
                     self.get_card_size(),
                 )),
                 |ui| {
-                    // TODO Ignore this response and instead use ui.response() to receive payloads
                     ui.dnd_drag_source(
                         ui.next_auto_id(),
+                        // TODO Make the payload be a unique identifier
                         DNDSelector::Stack,
                         |ui| ui.add(self.card_config.img(card)),
                     ).response.dnd_release_payload::<DNDSelector>().iter().for_each(|payload| {
                         sprintln!("Received Payload in {:?} over dnd_drag_source", self.kind);
                         sprintln!("Payload: {payload:?}");
+                        *self.payload.borrow_mut() = Some((**payload, self.cards.len()));
                     });
                 },
             );
@@ -203,6 +217,7 @@ impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
         if let Some(payload) = response.dnd_release_payload::<DNDSelector>() {
             sprintln!("Received Payload in {:?}", self.kind);
             sprintln!("Payload: {payload:?}");
+            *self.payload.borrow_mut() = Some((*payload, self.cards.len()));
         }
         response
     }
@@ -231,12 +246,31 @@ impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
             true
         });
         for (idx, card) in normal {
+            // TODO Old code to just draw cards
             self.card_config.img(card).paint_at(
                 ui,
                 Rect::from_min_size(
                     origin.add(self.card_pos(idx)),
                     self.get_card_size(),
                 ),
+            );
+            ui.allocate_new_ui(
+                egui::UiBuilder::new().max_rect(Rect::from_min_size(
+                    origin.add(self.card_pos(idx)),
+                    self.horizontal_drag_size(),
+                )),
+                |ui| {
+                    ui.dnd_drag_source(
+                        ui.next_auto_id(),
+                        // TODO Make the payload be a unique identifier
+                        DNDSelector::Player(0, idx),
+                        |ui| ui.add(self.card_config.img(card).maintain_aspect_ratio(false).tint(Color32::from_hex("#0000007f").unwrap())),
+                    ).response.dnd_release_payload::<DNDSelector>().iter().for_each(|payload| {
+                        sprintln!("Received Payload at card {:?} over dnd_drag_source", idx);
+                        sprintln!("Payload: {payload:?}");
+                        *self.payload.borrow_mut() = Some((**payload, idx));
+                    });
+                },
             );
         }
         for (idx, card) in selected {
@@ -249,7 +283,7 @@ impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
                 )
                 .show(ui.ctx(), |ui| {
                     egui::Frame::new()
-                        .stroke(egui::Stroke::new(2.0, egui::Color32::RED))
+                        .stroke(egui::Stroke::new(2.0, Color32::RED))
                         .corner_radius(egui::CornerRadius::same(2))
                         .show(ui, |ui| {
                             ui.set_min_size(self.get_card_size());
@@ -278,8 +312,13 @@ impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
         //         },
         //     );
         // }
-        ui.response()
-        // TODO use ui.response() to test for dnd_release_payload(...)
+        let response = ui.response();
+        if let Some(payload) = response.dnd_release_payload::<DNDSelector>() {
+            sprintln!("Received Payload in {:?}", self.kind);
+            sprintln!("Payload: {payload:?}");
+            *self.payload.borrow_mut() = Some((*payload, self.cards.len()));
+        }
+        response
     }
 }
 
