@@ -203,6 +203,7 @@ impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
                     ui.dnd_drag_source(
                         ui.next_auto_id(),
                         // TODO Make the payload be a unique identifier
+                        // TODO move the drag payload into a field: RefCell<Option<Payload>> just like the drop payload
                         DNDSelector::Stack,
                         |ui| ui.add(self.card_config.img(card)),
                     ).response.dnd_release_payload::<DNDSelector>().iter().for_each(|payload| {
@@ -263,6 +264,7 @@ impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
                     ui.dnd_drag_source(
                         ui.next_auto_id(),
                         // TODO Make the payload be a unique identifier
+                        // TODO move the drag payload into a field: RefCell<Option<Payload>> just like the drop payload
                         DNDSelector::Player(0, idx),
                         |ui| ui.add(self.card_config.img(card).maintain_aspect_ratio(false).tint(Color32::from_hex("#0000007f").unwrap())),
                     ).response.dnd_release_payload::<DNDSelector>().iter().for_each(|payload| {
