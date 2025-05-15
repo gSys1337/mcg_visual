@@ -2,7 +2,7 @@ use crate::game::card::{CardConfig, CardEncoding, DirectoryCardType, SimpleCard}
 use crate::game::field::{FieldWidget, SimpleField, SimpleFieldKind::Stack};
 use crate::sprintln;
 use eframe::Frame;
-use egui::{vec2, Color32, Context, Id};
+use egui::{vec2, Color32, Context, DragAndDrop, Id};
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
@@ -295,33 +295,44 @@ impl ScreenWidget for CardsTestDND {
                 if let Some(payload) = ui.add(stack.draw()).dnd_release_payload::<DNDSelector>() {
                     sprintln!("Received Payload in CardsTestDND over the Stack");
                     sprintln!("Payload: {payload:?}");
+                    self.drop = Some(DNDSelector::Stack)
                 }
-                let payload = *stack.payload.borrow();
-                if let Some((payload, _)) = payload {
-                    *stack.payload.borrow_mut() = None;
-                    cfg.move_card::<SimpleCard>(payload, DNDSelector::Stack);
+                match stack.get_payload() {
+                    (_, Some(_idx)) => self.drop = Some(DNDSelector::Stack),
+                    (Some(_idx), _) => if self.drag.is_none() { self.drag = Some(DNDSelector::Stack) },
+                    (None, None) => {},
                 }
                 let (name_0, field_0) = &cfg.players[0];
                 ui.label(name_0);
                 if let Some(payload) = ui.add(field_0.draw()).dnd_release_payload::<DNDSelector>() {
                     sprintln!("Received Payload in CardsTestDND over the first Field");
                     sprintln!("Payload: {payload:?}");
+                    self.drop = Some(DNDSelector::Player(0, field_0.cards.len()))
                 }
-                let payload = *field_0.payload.borrow();
-                if let Some((payload, dst_idx)) = payload {
-                    *field_0.payload.borrow_mut() = None;
-                    cfg.move_card::<SimpleCard>(payload, DNDSelector::Player(0, dst_idx));
+                match field_0.get_payload() {
+                    (_, Some(idx)) => self.drop = Some(DNDSelector::Player(0, idx)),
+                    (Some(idx), _) => if self.drag.is_none() { self.drag = Some(DNDSelector::Player(0, idx)) },
+                    (None, None) => {},
                 }
                 let (name_1, field_1) = &cfg.players[1];
                 ui.label(name_1);
                 if let Some(payload) = ui.add(field_1.draw()).dnd_release_payload::<DNDSelector>() {
                     sprintln!("Received Payload in CardsTestDND over the second Field");
                     sprintln!("Payload: {payload:?}");
+                    self.drop = Some(DNDSelector::Player(1, field_1.cards.len()))
                 }
-                let payload = *field_1.payload.borrow();
-                if let Some((payload, dst_idx)) = payload {
-                    *field_1.payload.borrow_mut() = None;
-                    cfg.move_card::<SimpleCard>(payload, DNDSelector::Player(1, dst_idx));
+                match field_1.get_payload() {
+                    (_, Some(idx)) => self.drop = Some(DNDSelector::Player(1, idx)),
+                    (Some(idx), _) => if self.drag.is_none() { self.drag = Some(DNDSelector::Player(1, idx)) },
+                    (None, None) => {},
+                }
+                if let (Some(source), Some(destination)) = (self.drag, self.drop) {
+                    sprintln!("Drag: {:?}\t Drop: {:?}", self.drag, self.drop);
+                    cfg.move_card::<SimpleCard>(source, destination);
+                    self.drag = None;
+                    self.drop = None;
+                } else {
+                    sprintln!("Drag: {:?}\t Drop: {:?}", self.drag, self.drop);
                 }
             }
         });
@@ -410,10 +421,12 @@ impl<C: CardConfig> GameConfig<C> {
         let card = match src {
             DNDSelector::Player(p_idx, c_idx) => self.players[p_idx].1.remove(c_idx),
             DNDSelector::Stack => self.stack.cards.pop().unwrap(),
+            DNDSelector::Index(_) => return,
         };
         match dst {
             DNDSelector::Player(p_idx, c_idx) => self.players[p_idx].1.insert(c_idx, card),
             DNDSelector::Stack => self.stack.cards.push(card),
+            DNDSelector::Index(_) => return,
         };
     }
 }
@@ -449,13 +462,16 @@ impl Default for DNDTest {
 pub enum DNDSelector {
     Player(usize, usize),
     Stack,
+    Index(usize),
 }
 pub struct CardsTestDND {
     pub(crate) game_config: Option<GameConfig<DirectoryCardType>>,
+    drag: Option<DNDSelector>,
+    drop: Option<DNDSelector>,
 }
 impl CardsTestDND {
     pub fn new() -> Self {
-        CardsTestDND { game_config: None }
+        CardsTestDND { game_config: None, drag: None, drop: None }
     }
 }
 impl Default for CardsTestDND {
