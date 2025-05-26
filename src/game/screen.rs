@@ -16,24 +16,29 @@ impl ScreenWidget for MainMenu {
             let width = rect.width() / 3.0;
             rect.set_left(width);
             rect.set_right(2.0 * width);
-            ui.allocate_new_ui(UiBuilder::new().layout(Layout::top_down_justified(Align::Min)).max_rect(rect), |ui| {
-                ui.vertical_centered_justified(|ui| {
-                    ui.add_space(20.0);
-                    if ui.button("Start").clicked() {
-                        sprintln!("setup started");
-                        *next_screen.borrow_mut() = String::from("game_setup");
-                    };
-                    ui.add_space(5.0);
-                    if ui.button("Settings").clicked() {
-                        sprintln!("settings opened");
-                        *next_screen.borrow_mut() = String::from("settings");
-                    };
-                    ui.add_space(5.0);
-                    if ui.button("Print Screen").clicked() {
-                        sprintln!("{}", next_screen.borrow());
-                    };
-                });
-            });
+            ui.allocate_new_ui(
+                UiBuilder::new()
+                    .layout(Layout::top_down_justified(Align::Min))
+                    .max_rect(rect),
+                |ui| {
+                    ui.vertical_centered_justified(|ui| {
+                        ui.add_space(20.0);
+                        if ui.button("Start").clicked() {
+                            sprintln!("setup started");
+                            *next_screen.borrow_mut() = String::from("game_setup");
+                        };
+                        ui.add_space(5.0);
+                        if ui.button("Settings").clicked() {
+                            sprintln!("settings opened");
+                            *next_screen.borrow_mut() = String::from("settings");
+                        };
+                        ui.add_space(5.0);
+                        if ui.button("Print Screen").clicked() {
+                            sprintln!("{}", next_screen.borrow());
+                        };
+                    });
+                },
+            );
         });
     }
 }
@@ -44,52 +49,57 @@ impl ScreenWidget for GameSetupScreen {
             let width = rect.width() / 3.0;
             rect.set_left(width);
             rect.set_right(2.0 * width);
-            ui.allocate_new_ui(UiBuilder::new().layout(Layout::top_down_justified(Align::Min)).max_rect(rect), |ui| {
-                ui.vertical_centered_justified(|ui| {
-                    ui.add_space(20.0);
-                    ui.horizontal(|ui| {
-                        ui.label("Selected Directory:");
-                        match self.directory.borrow().as_ref() {
-                            None => ui.label("None"),
-                            Some(dir) => ui.label(&dir.path),
-                        }
-                    });
-                    #[cfg(target_arch = "wasm32")]
-                    ui.add_space(5.0);
-                    if ui.button("Select Directory").clicked() {
+            ui.allocate_new_ui(
+                UiBuilder::new()
+                    .layout(Layout::top_down_justified(Align::Min))
+                    .max_rect(rect),
+                |ui| {
+                    ui.vertical_centered_justified(|ui| {
+                        ui.add_space(20.0);
+                        ui.horizontal(|ui| {
+                            ui.label("Selected Directory:");
+                            match self.directory.borrow().as_ref() {
+                                None => ui.label("None"),
+                                Some(dir) => ui.label(&dir.path),
+                            }
+                        });
                         #[cfg(target_arch = "wasm32")]
-                        DirectoryCardType::new_from_selection(Rc::clone(&self.directory));
-                    }
-                    ui.add_space(5.0);
-                    ui.horizontal(|ui| {
-                        ui.label("# Players");
-                        let drag = egui::DragValue::new(&mut self.players);
-                        ui.add(drag);
-                        let dec = egui::Button::new("-").min_size(vec2(30.0, 0.0));
-                        if ui.add(dec).clicked() && self.players > 1 {
-                            self.players = self.players.saturating_sub(1);
+                        ui.add_space(5.0);
+                        if ui.button("Select Directory").clicked() {
+                            #[cfg(target_arch = "wasm32")]
+                            DirectoryCardType::new_from_selection(Rc::clone(&self.directory));
                         }
-                        let inc = egui::Button::new("+").min_size(vec2(30.0, 0.0));
-                        if ui.add(inc).clicked() {
-                            self.players = self.players.saturating_add(1);
-                        }
-                    });
-                    ui.add_space(5.0);
-                    if ui.button("Start Game").clicked() {
-                        if let Some(game) = self.game_widget.upgrade() {
-                            let config = self.generate_config();
-                            if config.is_some() {
-                                game.borrow_mut().game_config = config;
-                                *next_screen.borrow_mut() = String::from("game");
+                        ui.add_space(5.0);
+                        ui.horizontal(|ui| {
+                            ui.label("# Players");
+                            let drag = egui::DragValue::new(&mut self.players);
+                            ui.add(drag);
+                            let dec = egui::Button::new("-").min_size(vec2(30.0, 0.0));
+                            if ui.add(dec).clicked() && self.players > 1 {
+                                self.players = self.players.saturating_sub(1);
+                            }
+                            let inc = egui::Button::new("+").min_size(vec2(30.0, 0.0));
+                            if ui.add(inc).clicked() {
+                                self.players = self.players.saturating_add(1);
+                            }
+                        });
+                        ui.add_space(5.0);
+                        if ui.button("Start Game").clicked() {
+                            if let Some(game) = self.game_widget.upgrade() {
+                                let config = self.generate_config();
+                                if config.is_some() {
+                                    game.borrow_mut().game_config = config;
+                                    *next_screen.borrow_mut() = String::from("game");
+                                }
                             }
                         }
-                    }
-                    ui.add_space(5.0);
-                    if ui.button("Back").clicked() {
-                        *next_screen.borrow_mut() = String::from("main");
-                    }
-                });
-            });
+                        ui.add_space(5.0);
+                        if ui.button("Back").clicked() {
+                            *next_screen.borrow_mut() = String::from("main");
+                        }
+                    });
+                },
+            );
         });
     }
 }
@@ -100,89 +110,107 @@ impl ScreenWidget for Game<DirectoryCardType> {
             let width = rect.width() / 3.0;
             rect.set_left(width);
             rect.set_right(2.0 * width);
-            ui.allocate_new_ui(UiBuilder::new().layout(Layout::top_down_justified(Align::Min)).max_rect(rect), |ui| {
-                ui.add_space(20.0);
-                ui.vertical_centered_justified(|ui| {
-                    if ui.button("Exit").clicked() {
-                        *next_screen.borrow_mut() = String::from("main");
-                    }
-                });
-                if self.game_config.is_none() {
-                    return;
-                }
-                ui.add_space(5.0);
-                ui.vertical_centered_justified(|ui| {
-                    ui.horizontal(|ui| {
-                        ui.label("1. Player:");
-                        egui::ComboBox::from_id_salt("Display Player 0").show_index(
-                            ui,
-                            &mut self.player0_idx,
-                            self.game_config.as_mut().unwrap().players.len(),
-                            |i| i.to_string(),
-                        );
-                        ui.add_space(3.0 * width - 2.0 * ui.cursor().left() + ui.spacing().item_spacing.x);
-                        ui.label("2. Player:");
-                        egui::ComboBox::from_id_salt("Display Player 1").show_index(
-                            ui,
-                            &mut self.player1_idx,
-                            self.game_config.as_mut().unwrap().players.len(),
-                            |i| i.to_string(),
-                        );
+            ui.allocate_new_ui(
+                UiBuilder::new()
+                    .layout(Layout::top_down_justified(Align::Min))
+                    .max_rect(rect),
+                |ui| {
+                    ui.add_space(20.0);
+                    ui.vertical_centered_justified(|ui| {
+                        if ui.button("Exit").clicked() {
+                            *next_screen.borrow_mut() = String::from("main");
+                        }
                     });
-                });
-                ui.add_space(5.0);
-                let cfg = self.game_config.as_mut().unwrap();
-                ui.add_space(5.0);
-                ui.label("Stack");
-                let stack = &cfg.stack;
-                if let Some(_payload) = ui.add(stack.draw()).dnd_release_payload::<DNDSelector>() {
-                    self.drop = Some(DNDSelector::Stack)
-                }
-                match stack.get_payload() {
-                    (_, Some(_idx)) => self.drop = Some(DNDSelector::Stack),
-                    (Some(_idx), _) => {
-                        if self.drag.is_none() {
-                            self.drag = Some(DNDSelector::Stack)
-                        }
+                    if self.game_config.is_none() {
+                        return;
                     }
-                    (None, None) => {}
-                }
-                let (name_0, field_0) = &cfg.players[self.player0_idx];
-                ui.add_space(5.0);
-                ui.label(name_0);
-                if let Some(_payload) = ui.add(field_0.draw()).dnd_release_payload::<DNDSelector>() {
-                    self.drop = Some(DNDSelector::Player(self.player0_idx, field_0.cards.len()))
-                }
-                match field_0.get_payload() {
-                    (_, Some(idx)) => self.drop = Some(DNDSelector::Player(self.player0_idx, idx)),
-                    (Some(idx), _) => {
-                        if self.drag.is_none() {
-                            self.drag = Some(DNDSelector::Player(self.player0_idx, idx))
-                        }
+                    ui.add_space(5.0);
+                    ui.vertical_centered_justified(|ui| {
+                        ui.horizontal(|ui| {
+                            ui.label("1. Player:");
+                            egui::ComboBox::from_id_salt("Display Player 0").show_index(
+                                ui,
+                                &mut self.player0_idx,
+                                self.game_config.as_mut().unwrap().players.len(),
+                                |i| i.to_string(),
+                            );
+                            ui.add_space(
+                                3.0 * width - 2.0 * ui.cursor().left()
+                                    + ui.spacing().item_spacing.x,
+                            );
+                            ui.label("2. Player:");
+                            egui::ComboBox::from_id_salt("Display Player 1").show_index(
+                                ui,
+                                &mut self.player1_idx,
+                                self.game_config.as_mut().unwrap().players.len(),
+                                |i| i.to_string(),
+                            );
+                        });
+                    });
+                    ui.add_space(5.0);
+                    let cfg = self.game_config.as_mut().unwrap();
+                    ui.add_space(5.0);
+                    ui.label("Stack");
+                    let stack = &cfg.stack;
+                    if let Some(_payload) =
+                        ui.add(stack.draw()).dnd_release_payload::<DNDSelector>()
+                    {
+                        self.drop = Some(DNDSelector::Stack)
                     }
-                    (None, None) => {}
-                }
-                let (name_1, field_1) = &cfg.players[self.player1_idx];
-                ui.add_space(5.0);
-                ui.label(name_1);
-                if let Some(_payload) = ui.add(field_1.draw()).dnd_release_payload::<DNDSelector>() {
-                    self.drop = Some(DNDSelector::Player(self.player1_idx, field_1.cards.len()))
-                }
-                match field_1.get_payload() {
-                    (_, Some(idx)) => self.drop = Some(DNDSelector::Player(self.player1_idx, idx)),
-                    (Some(idx), _) => {
-                        if self.drag.is_none() {
-                            self.drag = Some(DNDSelector::Player(self.player1_idx, idx))
+                    match stack.get_payload() {
+                        (_, Some(_idx)) => self.drop = Some(DNDSelector::Stack),
+                        (Some(_idx), _) => {
+                            if self.drag.is_none() {
+                                self.drag = Some(DNDSelector::Stack)
+                            }
                         }
+                        (None, None) => {}
                     }
-                    (None, None) => {}
-                }
-                if let (Some(source), Some(destination)) = (self.drag, self.drop) {
-                    cfg.move_card::<SimpleCard>(source, destination);
-                    self.drag = None;
-                    self.drop = None;
-                }
-            });
+                    let (name_0, field_0) = &cfg.players[self.player0_idx];
+                    ui.add_space(5.0);
+                    ui.label(name_0);
+                    if let Some(_payload) =
+                        ui.add(field_0.draw()).dnd_release_payload::<DNDSelector>()
+                    {
+                        self.drop = Some(DNDSelector::Player(self.player0_idx, field_0.cards.len()))
+                    }
+                    match field_0.get_payload() {
+                        (_, Some(idx)) => {
+                            self.drop = Some(DNDSelector::Player(self.player0_idx, idx))
+                        }
+                        (Some(idx), _) => {
+                            if self.drag.is_none() {
+                                self.drag = Some(DNDSelector::Player(self.player0_idx, idx))
+                            }
+                        }
+                        (None, None) => {}
+                    }
+                    let (name_1, field_1) = &cfg.players[self.player1_idx];
+                    ui.add_space(5.0);
+                    ui.label(name_1);
+                    if let Some(_payload) =
+                        ui.add(field_1.draw()).dnd_release_payload::<DNDSelector>()
+                    {
+                        self.drop = Some(DNDSelector::Player(self.player1_idx, field_1.cards.len()))
+                    }
+                    match field_1.get_payload() {
+                        (_, Some(idx)) => {
+                            self.drop = Some(DNDSelector::Player(self.player1_idx, idx))
+                        }
+                        (Some(idx), _) => {
+                            if self.drag.is_none() {
+                                self.drag = Some(DNDSelector::Player(self.player1_idx, idx))
+                            }
+                        }
+                        (None, None) => {}
+                    }
+                    if let (Some(source), Some(destination)) = (self.drag, self.drop) {
+                        cfg.move_card::<SimpleCard>(source, destination);
+                        self.drag = None;
+                        self.drop = None;
+                    }
+                },
+            );
         });
     }
 }
