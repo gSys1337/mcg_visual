@@ -2,7 +2,7 @@ use crate::game::card::{CardConfig, CardEncoding, DirectoryCardType, SimpleCard}
 use crate::game::field::{FieldWidget, SimpleField, SimpleFieldKind::Stack};
 use crate::sprintln;
 use eframe::Frame;
-use egui::{vec2, Color32, Context, DragAndDrop, Id};
+use egui::{vec2, Align, Context, Layout, UiBuilder};
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
@@ -12,329 +12,177 @@ pub trait ScreenWidget {
 impl ScreenWidget for MainMenu {
     fn update(&mut self, next_screen: Rc<RefCell<String>>, ctx: &Context, _frame: &mut Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            if ui.button("Start").clicked() {
-                sprintln!("setup started");
-                *next_screen.borrow_mut() = String::from("game_setup");
-            };
-            if ui.button("Drag & Drop Game").clicked() {
-                sprintln!("game_dnd opened");
-                *next_screen.borrow_mut() = String::from("game_dnd_setup");
-            };
-            if ui.button("Settings").clicked() {
-                sprintln!("settings opened");
-                *next_screen.borrow_mut() = String::from("settings");
-            };
-            if ui.button("Drag & Drop Test").clicked() {
-                sprintln!("dnd_test opened");
-                *next_screen.borrow_mut() = String::from("dnd_test");
-            };
-            if ui.button("Print Screen").clicked() {
-                sprintln!("{}", next_screen.borrow());
-            };
+            let mut rect = ui.max_rect();
+            let width = rect.width() / 3.0;
+            rect.set_left(width);
+            rect.set_right(2.0 * width);
+            ui.allocate_new_ui(UiBuilder::new().layout(Layout::top_down_justified(Align::Min)).max_rect(rect), |ui| {
+                ui.vertical_centered_justified(|ui| {
+                    ui.add_space(20.0);
+                    if ui.button("Start").clicked() {
+                        sprintln!("setup started");
+                        *next_screen.borrow_mut() = String::from("game_setup");
+                    };
+                    ui.add_space(5.0);
+                    if ui.button("Settings").clicked() {
+                        sprintln!("settings opened");
+                        *next_screen.borrow_mut() = String::from("settings");
+                    };
+                    ui.add_space(5.0);
+                    if ui.button("Print Screen").clicked() {
+                        sprintln!("{}", next_screen.borrow());
+                    };
+                });
+            });
         });
     }
 }
 impl ScreenWidget for GameSetupScreen {
     fn update(&mut self, next_screen: Rc<RefCell<String>>, ctx: &Context, _frame: &mut Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.label("Selected Directory:");
-                match self.directory.borrow().as_ref() {
-                    None => ui.label("None"),
-                    Some(dir) => ui.label(format!("{:?}", dir)),
-                }
-            });
-            if ui.button("Select Directory").clicked() {
-                #[cfg(target_arch = "wasm32")]
-                DirectoryCardType::new_from_selection(Rc::clone(&self.directory));
-            }
-            ui.horizontal(|ui| {
-                ui.label("# Players");
-                let drag = egui::DragValue::new(&mut self.players);
-                ui.add(drag);
-                let dec = egui::Button::new("-").min_size(vec2(30.0, 0.0));
-                if ui.add(dec).clicked() && self.players > 1 {
-                    self.players = self.players.saturating_sub(1);
-                }
-                let inc = egui::Button::new("+").min_size(vec2(30.0, 0.0));
-                if ui.add(inc).clicked() {
-                    self.players = self.players.saturating_add(1);
-                }
-            });
-            if ui.button("Start Game").clicked() {
-                if let Some(game) = self.game_widget.upgrade() {
-                    let config = self.generate_config();
-                    if config.is_some() {
-                        game.borrow_mut().game_config = config;
-                        *next_screen.borrow_mut() = String::from("game");
+            let mut rect = ui.max_rect();
+            let width = rect.width() / 3.0;
+            rect.set_left(width);
+            rect.set_right(2.0 * width);
+            ui.allocate_new_ui(UiBuilder::new().layout(Layout::top_down_justified(Align::Min)).max_rect(rect), |ui| {
+                ui.vertical_centered_justified(|ui| {
+                    ui.add_space(20.0);
+                    ui.horizontal(|ui| {
+                        ui.label("Selected Directory:");
+                        match self.directory.borrow().as_ref() {
+                            None => ui.label("None"),
+                            Some(dir) => ui.label(&dir.path),
+                        }
+                    });
+                    #[cfg(target_arch = "wasm32")]
+                    ui.add_space(5.0);
+                    if ui.button("Select Directory").clicked() {
+                        #[cfg(target_arch = "wasm32")]
+                        DirectoryCardType::new_from_selection(Rc::clone(&self.directory));
                     }
-                }
-            }
-            if ui.button("Back").clicked() {
-                *next_screen.borrow_mut() = String::from("main");
-            }
+                    ui.add_space(5.0);
+                    ui.horizontal(|ui| {
+                        ui.label("# Players");
+                        let drag = egui::DragValue::new(&mut self.players);
+                        ui.add(drag);
+                        let dec = egui::Button::new("-").min_size(vec2(30.0, 0.0));
+                        if ui.add(dec).clicked() && self.players > 1 {
+                            self.players = self.players.saturating_sub(1);
+                        }
+                        let inc = egui::Button::new("+").min_size(vec2(30.0, 0.0));
+                        if ui.add(inc).clicked() {
+                            self.players = self.players.saturating_add(1);
+                        }
+                    });
+                    ui.add_space(5.0);
+                    if ui.button("Start Game").clicked() {
+                        if let Some(game) = self.game_widget.upgrade() {
+                            let config = self.generate_config();
+                            if config.is_some() {
+                                game.borrow_mut().game_config = config;
+                                *next_screen.borrow_mut() = String::from("game");
+                            }
+                        }
+                    }
+                    ui.add_space(5.0);
+                    if ui.button("Back").clicked() {
+                        *next_screen.borrow_mut() = String::from("main");
+                    }
+                });
+            });
         });
     }
 }
 impl ScreenWidget for Game<DirectoryCardType> {
     fn update(&mut self, next_screen: Rc<RefCell<String>>, ctx: &Context, _frame: &mut Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            if ui.button("Exit").clicked() {
-                sprintln!("back to main menu");
-                *next_screen.borrow_mut() = String::from("main");
-            }
-            ui.horizontal(|ui| {
-                ui.label("Image Directory:");
-                ui.label(format!(
-                    "{:?}",
-                    &self.game_config.as_ref().unwrap().stack.card_config.path
-                ));
-            });
-            let images = self
-                .game_config
-                .as_ref()
-                .unwrap()
-                .stack
-                .card_config
-                .img_names
-                .clone();
-            ui.horizontal(|ui| {
-                ui.label("Images:");
-                egui::ComboBox::from_id_salt("Image Name preview").show_index(
-                    ui,
-                    &mut self.image_idx,
-                    self.game_config
-                        .as_ref()
-                        .unwrap()
-                        .stack
-                        .card_config
-                        .img_names
-                        .len(),
-                    |i| &images[i],
-                );
-            });
-            let player_names: Vec<String> = self
-                .game_config
-                .as_ref()
-                .unwrap()
-                .players
-                .iter()
-                .clone()
-                .map(|e| e.0.clone())
-                .collect();
-            ui.horizontal(|ui| {
-                ui.label("Player:");
-                egui::ComboBox::from_id_salt("Display Player Fields").show_index(
-                    ui,
-                    &mut self.player_idx,
-                    self.game_config.as_ref().unwrap().players.len(),
-                    |i| &player_names[i],
-                );
-            });
-            ui.horizontal(|ui| {
-                ui.add(self.game_config.as_ref().unwrap().stack.draw());
-                ui.add(
-                    self.game_config.as_ref().unwrap().players[self.player_idx]
-                        .1
-                        .draw(),
-                );
-            });
-        });
-    }
-}
-impl ScreenWidget for DNDTest {
-    fn update(&mut self, next_screen: Rc<RefCell<String>>, ctx: &Context, _frame: &mut Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            if ui.button("Exit").clicked() {
-                sprintln!("back to main menu");
-                *next_screen.borrow_mut() = String::from("main");
-            }
-            ui.label("This is a simple example of drag-and-drop in egui.");
-            ui.label("Drag items between columns.");
-
-            // If there is a drop, store the location of the item being dragged, and the destination for the drop.
-            let mut from = None;
-            let mut to = None;
-
-            ui.columns(self.columns.len(), |uis| {
-                for (col_idx, column) in self.columns.clone().into_iter().enumerate() {
-                    let ui = &mut uis[col_idx];
-
-                    let frame = egui::Frame::default().inner_margin(4.0);
-
-                    let (_, dropped_payload) = ui.dnd_drop_zone::<Location, ()>(frame, |ui| {
-                        ui.set_min_size(vec2(64.0, 100.0));
-                        for (row_idx, item) in column.iter().enumerate() {
-                            let item_id = Id::new(("my_drag_and_drop_demo", col_idx, row_idx));
-                            let item_location = Location {
-                                col: col_idx,
-                                row: row_idx,
-                            };
-                            let response = ui
-                                .dnd_drag_source(item_id, item_location, |ui| {
-                                    ui.label(item);
-                                })
-                                .response;
-
-                            // Detect drops onto this item:
-                            if let (Some(pointer), Some(hovered_payload)) = (
-                                ui.input(|i| i.pointer.interact_pos()),
-                                response.dnd_hover_payload::<Location>(),
-                            ) {
-                                let rect = response.rect;
-
-                                // Preview insertion:
-                                let stroke = egui::Stroke::new(1.0, Color32::WHITE);
-                                let insert_row_idx = if *hovered_payload == item_location {
-                                    // We are dragged onto ourselves
-                                    ui.painter().hline(rect.x_range(), rect.center().y, stroke);
-                                    row_idx
-                                } else if pointer.y < rect.center().y {
-                                    // Above us
-                                    ui.painter().hline(rect.x_range(), rect.top(), stroke);
-                                    row_idx
-                                } else {
-                                    // Below us
-                                    ui.painter().hline(rect.x_range(), rect.bottom(), stroke);
-                                    row_idx + 1
-                                };
-
-                                if let Some(dragged_payload) = response.dnd_release_payload() {
-                                    // The user dropped onto this item.
-                                    from = Some(dragged_payload);
-                                    to = Some(Location {
-                                        col: col_idx,
-                                        row: insert_row_idx,
-                                    });
-                                }
-                            }
-                        }
+            let mut rect = ui.max_rect();
+            let width = rect.width() / 3.0;
+            rect.set_left(width);
+            rect.set_right(2.0 * width);
+            ui.allocate_new_ui(UiBuilder::new().layout(Layout::top_down_justified(Align::Min)).max_rect(rect), |ui| {
+                ui.add_space(20.0);
+                ui.vertical_centered_justified(|ui| {
+                    if ui.button("Exit").clicked() {
+                        *next_screen.borrow_mut() = String::from("main");
+                    }
+                });
+                if self.game_config.is_none() {
+                    return;
+                }
+                ui.add_space(5.0);
+                ui.vertical_centered_justified(|ui| {
+                    ui.horizontal(|ui| {
+                        ui.label("1. Player:");
+                        egui::ComboBox::from_id_salt("Display Player 0").show_index(
+                            ui,
+                            &mut self.player0_idx,
+                            self.game_config.as_mut().unwrap().players.len(),
+                            |i| i.to_string(),
+                        );
+                        ui.add_space(3.0 * width - 2.0 * ui.cursor().left() + ui.spacing().item_spacing.x);
+                        ui.label("2. Player:");
+                        egui::ComboBox::from_id_salt("Display Player 1").show_index(
+                            ui,
+                            &mut self.player1_idx,
+                            self.game_config.as_mut().unwrap().players.len(),
+                            |i| i.to_string(),
+                        );
                     });
-
-                    if let Some(dragged_payload) = dropped_payload {
-                        // The user dropped onto the column, but not on any one item.
-                        from = Some(dragged_payload);
-                        to = Some(Location {
-                            col: col_idx,
-                            row: usize::MAX, // Inset last
-                        });
-                    }
-                }
-            });
-
-            if let (Some(from), Some(mut to)) = (from, to) {
-                if from.col == to.col {
-                    // Dragging within the same column.
-                    // Adjust row index if we are re-ordering:
-                    to.row -= (from.row < to.row) as usize;
-                }
-
-                let item = self.columns[from.col].remove(from.row);
-
-                let column = &mut self.columns[to.col];
-                to.row = to.row.min(column.len());
-                column.insert(to.row, item);
-            }
-        });
-    }
-}
-impl ScreenWidget for GameSetupScreen<DirectoryCardType, CardsTestDND> {
-    fn update(&mut self, next_screen: Rc<RefCell<String>>, ctx: &Context, _frame: &mut Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.label("Selected Directory:");
-                match self.directory.borrow().as_ref() {
-                    None => ui.label("None"),
-                    Some(dir) => ui.label(&dir.path),
-                }
-            });
-            if ui.button("Select Directory").clicked() {
-                #[cfg(target_arch = "wasm32")]
-                DirectoryCardType::new_from_selection(Rc::clone(&self.directory));
-            }
-            ui.horizontal(|ui| {
-                ui.label("# Players");
-                let drag = egui::DragValue::new(&mut self.players);
-                ui.add(drag);
-                let dec = egui::Button::new("-").min_size(vec2(30.0, 0.0));
-                if ui.add(dec).clicked() && self.players > 1 {
-                    self.players = self.players.saturating_sub(1);
-                }
-                let inc = egui::Button::new("+").min_size(vec2(30.0, 0.0));
-                if ui.add(inc).clicked() {
-                    self.players = self.players.saturating_add(1);
-                }
-            });
-            if ui.button("Start Game").clicked() {
-                if let Some(game) = self.game_widget.upgrade() {
-                    let config = self.generate_config();
-                    if config.is_some() {
-                        game.borrow_mut().game_config = config;
-                        *next_screen.borrow_mut() = String::from("game_dnd");
-                    }
-                }
-            }
-            if ui.button("Back").clicked() {
-                *next_screen.borrow_mut() = String::from("main");
-            }
-        });
-    }
-}
-impl ScreenWidget for CardsTestDND {
-    fn update(&mut self, next_screen: Rc<RefCell<String>>, ctx: &Context, _frame: &mut Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            if ui.button("Exit").clicked() {
-                *next_screen.borrow_mut() = String::from("main");
-            }
-            if self.game_config.is_none() {
-                return;
-            }
-            if let Some(cfg) = self.game_config.as_mut() {
+                });
+                ui.add_space(5.0);
+                let cfg = self.game_config.as_mut().unwrap();
+                ui.add_space(5.0);
                 ui.label("Stack");
                 let stack = &cfg.stack;
-                if let Some(payload) = ui.add(stack.draw()).dnd_release_payload::<DNDSelector>() {
-                    sprintln!("Received Payload in CardsTestDND over the Stack");
-                    sprintln!("Payload: {payload:?}");
+                if let Some(_payload) = ui.add(stack.draw()).dnd_release_payload::<DNDSelector>() {
                     self.drop = Some(DNDSelector::Stack)
                 }
                 match stack.get_payload() {
                     (_, Some(_idx)) => self.drop = Some(DNDSelector::Stack),
-                    (Some(_idx), _) => if self.drag.is_none() { self.drag = Some(DNDSelector::Stack) },
-                    (None, None) => {},
+                    (Some(_idx), _) => {
+                        if self.drag.is_none() {
+                            self.drag = Some(DNDSelector::Stack)
+                        }
+                    }
+                    (None, None) => {}
                 }
-                let (name_0, field_0) = &cfg.players[0];
+                let (name_0, field_0) = &cfg.players[self.player0_idx];
+                ui.add_space(5.0);
                 ui.label(name_0);
-                if let Some(payload) = ui.add(field_0.draw()).dnd_release_payload::<DNDSelector>() {
-                    sprintln!("Received Payload in CardsTestDND over the first Field");
-                    sprintln!("Payload: {payload:?}");
-                    self.drop = Some(DNDSelector::Player(0, field_0.cards.len()))
+                if let Some(_payload) = ui.add(field_0.draw()).dnd_release_payload::<DNDSelector>() {
+                    self.drop = Some(DNDSelector::Player(self.player0_idx, field_0.cards.len()))
                 }
                 match field_0.get_payload() {
-                    (_, Some(idx)) => self.drop = Some(DNDSelector::Player(0, idx)),
-                    (Some(idx), _) => if self.drag.is_none() { self.drag = Some(DNDSelector::Player(0, idx)) },
-                    (None, None) => {},
+                    (_, Some(idx)) => self.drop = Some(DNDSelector::Player(self.player0_idx, idx)),
+                    (Some(idx), _) => {
+                        if self.drag.is_none() {
+                            self.drag = Some(DNDSelector::Player(self.player0_idx, idx))
+                        }
+                    }
+                    (None, None) => {}
                 }
-                let (name_1, field_1) = &cfg.players[1];
+                let (name_1, field_1) = &cfg.players[self.player1_idx];
+                ui.add_space(5.0);
                 ui.label(name_1);
-                if let Some(payload) = ui.add(field_1.draw()).dnd_release_payload::<DNDSelector>() {
-                    sprintln!("Received Payload in CardsTestDND over the second Field");
-                    sprintln!("Payload: {payload:?}");
-                    self.drop = Some(DNDSelector::Player(1, field_1.cards.len()))
+                if let Some(_payload) = ui.add(field_1.draw()).dnd_release_payload::<DNDSelector>() {
+                    self.drop = Some(DNDSelector::Player(self.player1_idx, field_1.cards.len()))
                 }
                 match field_1.get_payload() {
-                    (_, Some(idx)) => self.drop = Some(DNDSelector::Player(1, idx)),
-                    (Some(idx), _) => if self.drag.is_none() { self.drag = Some(DNDSelector::Player(1, idx)) },
-                    (None, None) => {},
+                    (_, Some(idx)) => self.drop = Some(DNDSelector::Player(self.player1_idx, idx)),
+                    (Some(idx), _) => {
+                        if self.drag.is_none() {
+                            self.drag = Some(DNDSelector::Player(self.player1_idx, idx))
+                        }
+                    }
+                    (None, None) => {}
                 }
                 if let (Some(source), Some(destination)) = (self.drag, self.drop) {
-                    sprintln!("Drag: {:?}\t Drop: {:?}", self.drag, self.drop);
                     cfg.move_card::<SimpleCard>(source, destination);
                     self.drag = None;
                     self.drop = None;
-                } else {
-                    sprintln!("Drag: {:?}\t Drop: {:?}", self.drag, self.drop);
                 }
-            }
+            });
         });
     }
 }
@@ -366,7 +214,7 @@ impl<C: CardConfig + Clone, G> GameSetupScreen<C, G> {
             game_widget,
         }
     }
-    fn generate_config(&self) -> Option<GameConfig<C>> {
+    fn generate_config(&self) -> Option<GameState<C>> {
         let directory = Rc::new(self.directory.borrow().clone()?);
         let mut players: Vec<(String, SimpleField<SimpleCard, C>)> = (0..self.players)
             .map(|i| {
@@ -379,27 +227,34 @@ impl<C: CardConfig + Clone, G> GameSetupScreen<C, G> {
                 )
             })
             .collect();
-        let mut stack = SimpleField::new(Rc::clone(&directory)).kind(Stack).max_card_size(vec2(100.0, 150.0));
+        let mut stack = SimpleField::new(Rc::clone(&directory))
+            .kind(Stack)
+            .max_card_size(vec2(100.0, 150.0));
         for i in 0..directory.T() {
             let card = SimpleCard::Open(i);
             stack.push(card);
             players[i % self.players].1.push(SimpleCard::Open(i));
         }
-        Some(GameConfig { players, stack })
+        Some(GameState { players, stack })
     }
 }
 
+/// Struct for a game with one stack and arbitrary players
 pub struct Game<C: CardConfig> {
-    pub(crate) game_config: Option<GameConfig<C>>,
-    image_idx: usize,
-    player_idx: usize,
+    pub(crate) game_config: Option<GameState<C>>,
+    player0_idx: usize,
+    player1_idx: usize,
+    drag: Option<DNDSelector>,
+    drop: Option<DNDSelector>,
 }
 impl<C: CardConfig> Game<C> {
     pub fn new() -> Self {
         Self {
             game_config: None,
-            image_idx: 0,
-            player_idx: 0,
+            player0_idx: 0,
+            player1_idx: 1,
+            drag: None,
+            drop: None,
         }
     }
 }
@@ -409,11 +264,11 @@ impl<C: CardConfig> Default for Game<C> {
     }
 }
 
-pub struct GameConfig<C: CardConfig> {
+pub struct GameState<C: CardConfig> {
     players: Vec<(String, SimpleField<SimpleCard, C>)>,
     stack: SimpleField<SimpleCard, C>,
 }
-impl<C: CardConfig> GameConfig<C> {
+impl<C: CardConfig> GameState<C> {
     pub fn move_card<E: CardEncoding>(&mut self, src: DNDSelector, dst: DNDSelector) {
         if src == dst {
             return;
@@ -426,35 +281,9 @@ impl<C: CardConfig> GameConfig<C> {
         match dst {
             DNDSelector::Player(p_idx, c_idx) => self.players[p_idx].1.insert(c_idx, card),
             DNDSelector::Stack => self.stack.cards.push(card),
+            #[allow(clippy::needless_return)]
             DNDSelector::Index(_) => return,
         };
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct Location {
-    col: usize,
-    row: usize,
-}
-pub struct DNDTest {
-    columns: Vec<Vec<String>>,
-}
-impl DNDTest {
-    pub fn new() -> Self {
-        let columns = vec![
-            vec!["Item A", "Item B", "Item C", "Item D"],
-            vec!["Item E", "Item F", "Item G"],
-            vec!["Item H", "Item I", "Item J", "Item K"],
-        ]
-            .into_iter()
-            .map(|v| v.into_iter().map(ToString::to_string).collect())
-            .collect();
-        DNDTest { columns }
-    }
-}
-impl Default for DNDTest {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -463,19 +292,4 @@ pub enum DNDSelector {
     Player(usize, usize),
     Stack,
     Index(usize),
-}
-pub struct CardsTestDND {
-    pub(crate) game_config: Option<GameConfig<DirectoryCardType>>,
-    drag: Option<DNDSelector>,
-    drop: Option<DNDSelector>,
-}
-impl CardsTestDND {
-    pub fn new() -> Self {
-        CardsTestDND { game_config: None, drag: None, drop: None }
-    }
-}
-impl Default for CardsTestDND {
-    fn default() -> Self {
-        Self::new()
-    }
 }
