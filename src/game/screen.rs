@@ -2,7 +2,7 @@ use crate::game::card::{CardConfig, CardEncoding, DirectoryCardType, SimpleCard}
 use crate::game::field::{FieldWidget, SimpleField, SimpleFieldKind::Stack};
 use crate::sprintln;
 use eframe::Frame;
-use egui::{vec2, Align, Context, Layout, UiBuilder};
+use egui::{vec2, Align, Context, Layout, Rect, UiBuilder};
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
@@ -208,6 +208,34 @@ impl ScreenWidget for Game<DirectoryCardType> {
                         cfg.move_card::<SimpleCard>(source, destination);
                         self.drag = None;
                         self.drop = None;
+                        sprintln!("Drag: {:?}\tDrop: {:?}", self.drag, self.drop);
+                    } else {
+                        sprintln!("Drag: {:?}\tDrop: {:?}", self.drag, self.drop);
+                    }
+                    if ui.input(|i| i.pointer.primary_down()) {
+                        if let Some(drag) = self.drag {
+                            let (img, size) = match drag {
+                                DNDSelector::Player(field_idx, card_idx) => {
+                                    let card = &cfg.players[field_idx].1.cards[card_idx];
+                                    (
+                                        cfg.players[field_idx].1.card_config.img(card),
+                                        cfg.players[field_idx].1.get_card_size(),
+                                    )
+                                }
+                                DNDSelector::Stack => {
+                                    let card = cfg.stack.cards.last().unwrap();
+                                    (cfg.stack.card_config.img(card), cfg.stack.get_card_size())
+                                }
+                                _ => {
+                                    panic!("This should not happen")
+                                }
+                            };
+                            if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
+                                img.paint_at(ui, Rect::from_min_size(pointer_pos, size));
+                            }
+                        }
+                    } else if self.drag.is_some() {
+                        self.drag = None;
                     }
                 },
             );
