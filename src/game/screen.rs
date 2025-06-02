@@ -205,10 +205,10 @@ impl ScreenWidget for Game<DirectoryCardType> {
                         (None, None) => {}
                     }
                     if let (Some(source), Some(destination)) = (self.drag, self.drop) {
+                        // sprintln!("Drag: {:?}\tDrop: {:?}", self.drag, self.drop);
                         cfg.move_card::<SimpleCard>(source, destination);
                         self.drag = None;
                         self.drop = None;
-                        // sprintln!("Drag: {:?}\tDrop: {:?}", self.drag, self.drop);
                     } else {
                         // sprintln!("Drag: {:?}\tDrop: {:?}", self.drag, self.drop);
                     }

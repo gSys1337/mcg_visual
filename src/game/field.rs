@@ -1,6 +1,7 @@
 use crate::game::card::SimpleCard::Open;
 use crate::game::card::{CardConfig, CardEncoding};
 use crate::game::screen::DNDSelector;
+use crate::sprintln;
 use eframe::emath::{vec2, Rect};
 use egui::{frame, Color32, Sense, Vec2};
 use std::cell::RefCell;
@@ -160,15 +161,14 @@ impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
 }
 /// Internal
 impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
-    fn set_drag_payload(&self, ui: &egui::Ui, payload: usize) {
+    fn set_drag_payload(&self, response: &egui::Response, payload: usize) {
         // TODO Make the payload be a unique identifier
-        ui.response()
-            .dnd_set_drag_payload(DNDSelector::Index(self.cards.len() - 1));
+        response.dnd_set_drag_payload(DNDSelector::Index(payload));
         self.drag_payload.replace(Some(payload));
     }
-    fn set_drop_payload(&self, ui: &egui::Ui, payload: usize) {
+    fn set_drop_payload(&self, response: &egui::Response, payload: usize) {
         // TODO Make the payload be a unique identifier
-        if ui.response().dnd_release_payload::<DNDSelector>().is_some() {
+        if response.dnd_release_payload::<DNDSelector>().is_some() {
             self.drop_payload.replace(Some(payload));
         }
     }
@@ -247,27 +247,30 @@ impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
                 |ui| {
                     ui.set_min_size(self.get_card_size());
                     if ui.response().drag_started() {
-                        self.set_drag_payload(ui, self.cards.len() - 1);
+                        self.set_drag_payload(&ui.response(), self.cards.len() - 1);
                     }
-                    self.set_drop_payload(ui, self.cards.len())
+                    self.set_drop_payload(&ui.response(), self.cards.len());
+                    ui.response().context_menu(|ui| {
+                        if ui.button("Show inner").clicked() {
+                            sprintln!(
+                                "Imagine the hided information of card {idx} here",
+                                idx = self.cards.len() - 1
+                            );
+                            ui.close_menu();
+                        }
+                    });
                 },
             );
-            self.set_drop_payload(ui, self.cards.len());
+            self.set_drop_payload(&ui.response(), self.cards.len());
         }
         ui.response()
     }
     fn draw_horizontal(&self, ui: &mut egui::Ui) -> egui::Response {
         ui.set_min_size(self.content_size());
         let origin = ui.cursor().left_top().add(vec2(0.0, self.margin as f32));
-        let selection: Option<usize> = self.horizontal_card_selection(ui);
-        type Partition<'a, E> = (Vec<(usize, &'a E)>, Vec<(usize, &'a E)>);
-        let (normal, selected): Partition<E> = self.cards.iter().enumerate().partition(|(i, _)| {
-            let _true_selection =
-                !(self.selectable && (selection.is_some() && selection.unwrap() == *i));
-            true
-            // _true_selection
-        });
-        for (idx, card) in normal {
+        // TODO show card on mouse hover if obstructed
+        let _selection: Option<usize> = self.horizontal_card_selection(ui);
+        for (idx, card) in self.cards.iter().enumerate() {
             self.card_config.img(card).paint_at(
                 ui,
                 Rect::from_min_size(origin.add(self.card_pos(idx)), self.get_card_size()),
@@ -283,9 +286,9 @@ impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
                     |ui| {
                         ui.set_min_size(self.horizontal_drag_size());
                         if ui.response().drag_started() {
-                            self.set_drag_payload(ui, idx);
+                            self.set_drag_payload(&ui.response(), idx);
                         }
-                        self.set_drop_payload(ui, idx)
+                        self.set_drop_payload(&ui.response(), idx)
                     },
                 );
             }
@@ -301,34 +304,12 @@ impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
                 |ui| {
                     ui.set_min_size(last_drag_rect_size);
                     if ui.response().drag_started() {
-                        self.set_drag_payload(ui, self.cards.len() - 1);
+                        self.set_drag_payload(&ui.response(), self.cards.len() - 1);
                     }
-                    self.set_drop_payload(ui, self.cards.len())
+                    self.set_drop_payload(&ui.response(), self.cards.len())
                 },
             );
-            self.set_drop_payload(ui, self.cards.len());
-        }
-        // TODO show card on mouse hover if obstructed
-        for (idx, card) in selected {
-            let img = self.card_config.img(card);
-            egui::Area::new(ui.next_auto_id())
-                .fixed_pos(
-                    origin
-                        .add(self.card_pos(idx))
-                        .add(vec2(0.0, -self.margin as f32)),
-                )
-                .show(ui.ctx(), |ui| {
-                    egui::Frame::new()
-                        .stroke(egui::Stroke::new(2.0, Color32::RED))
-                        .corner_radius(egui::CornerRadius::same(2))
-                        .show(ui, |ui| {
-                            ui.set_min_size(self.get_card_size());
-                            img.paint_at(
-                                ui,
-                                Rect::from_min_size(ui.cursor().left_top(), self.get_card_size()),
-                            );
-                        });
-                });
+            self.set_drop_payload(&ui.response(), self.cards.len());
         }
         ui.response()
     }
