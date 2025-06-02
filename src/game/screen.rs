@@ -208,9 +208,9 @@ impl ScreenWidget for Game<DirectoryCardType> {
                         cfg.move_card::<SimpleCard>(source, destination);
                         self.drag = None;
                         self.drop = None;
-                        sprintln!("Drag: {:?}\tDrop: {:?}", self.drag, self.drop);
+                        // sprintln!("Drag: {:?}\tDrop: {:?}", self.drag, self.drop);
                     } else {
-                        sprintln!("Drag: {:?}\tDrop: {:?}", self.drag, self.drop);
+                        // sprintln!("Drag: {:?}\tDrop: {:?}", self.drag, self.drop);
                     }
                     if ui.input(|i| i.pointer.primary_down()) {
                         if let Some(drag) = self.drag {

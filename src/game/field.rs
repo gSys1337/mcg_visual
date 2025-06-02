@@ -2,7 +2,7 @@ use crate::game::card::SimpleCard::Open;
 use crate::game::card::{CardConfig, CardEncoding};
 use crate::game::screen::DNDSelector;
 use eframe::emath::{vec2, Rect};
-use egui::{frame, Color32, DragAndDrop, Vec2};
+use egui::{frame, Color32, Sense, Vec2};
 use std::cell::RefCell;
 use std::fmt::{Debug, Formatter};
 use std::ops::Add;
@@ -161,12 +161,14 @@ impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
 /// Internal
 impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
     fn set_drag_payload(&self, ui: &egui::Ui, payload: usize) {
-        if DragAndDrop::has_any_payload(ui.ctx()) && self.drag_payload.borrow().is_none() {
-            self.drag_payload.replace(Some(payload));
-        }
+        // TODO Make the payload be a unique identifier
+        ui.response()
+            .dnd_set_drag_payload(DNDSelector::Index(self.cards.len() - 1));
+        self.drag_payload.replace(Some(payload));
     }
-    fn set_drop_payload(&self, response: &egui::Response, payload: usize) {
-        if response.dnd_release_payload::<DNDSelector>().is_some() {
+    fn set_drop_payload(&self, ui: &egui::Ui, payload: usize) {
+        // TODO Make the payload be a unique identifier
+        if ui.response().dnd_release_payload::<DNDSelector>().is_some() {
             self.drop_payload.replace(Some(payload));
         }
     }
@@ -236,30 +238,23 @@ impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
         }
         if self.draggable && !self.cards.is_empty() {
             ui.allocate_new_ui(
-                egui::UiBuilder::new().max_rect(Rect::from_min_size(
-                    origin.add(self.card_pos(self.cards.len())),
-                    self.get_card_size(),
-                )),
+                egui::UiBuilder::new()
+                    .sense(Sense::click_and_drag())
+                    .max_rect(Rect::from_min_size(
+                        origin.add(self.card_pos(self.cards.len() - 1)),
+                        self.get_card_size(),
+                    )),
                 |ui| {
-                    let response = ui
-                        .dnd_drag_source(
-                            ui.next_auto_id(),
-                            // TODO Make the payload be a unique identifier
-                            // TODO move the drag payload into a field: RefCell<Option<Payload>> just like the drop payload
-                            DNDSelector::Index(self.cards.len() - 1),
-                            |ui| {
-                                ui.set_min_size(self.get_card_size());
-                            },
-                        )
-                        .response;
-                    self.set_drag_payload(ui, self.cards.len() - 1);
-                    self.set_drop_payload(&response, self.cards.len() - 1);
+                    ui.set_min_size(self.get_card_size());
+                    if ui.response().drag_started() {
+                        self.set_drag_payload(ui, self.cards.len() - 1);
+                    }
+                    self.set_drop_payload(ui, self.cards.len())
                 },
             );
+            self.set_drop_payload(ui, self.cards.len());
         }
-        let response = ui.response();
-        self.set_drop_payload(&response, self.cards.len() - 1);
-        response
+        ui.response()
     }
     fn draw_horizontal(&self, ui: &mut egui::Ui) -> egui::Response {
         ui.set_min_size(self.content_size());
@@ -277,46 +272,43 @@ impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
                 ui,
                 Rect::from_min_size(origin.add(self.card_pos(idx)), self.get_card_size()),
             );
-            ui.allocate_new_ui(
-                egui::UiBuilder::new().max_rect(Rect::from_min_size(
-                    origin.add(self.card_pos(idx)),
-                    self.horizontal_drag_size(),
-                )),
-                |ui| {
-                    let drag_source = ui.dnd_drag_source(
-                        ui.next_auto_id(),
-                        // TODO Make the payload be a unique identifier
-                        // TODO move the drag payload into a field: RefCell<Option<Payload>> just like the drop payload
-                        DNDSelector::Index(idx),
-                        |ui| {
-                            ui.set_min_size(self.horizontal_drag_size());
-                        },
-                    );
-                    self.set_drag_payload(ui, idx);
-                    self.set_drop_payload(&drag_source.response, idx);
-                },
-            );
-        }
-        let last_drag_rect_min = origin.add(self.card_pos(self.cards.len()));
-        let mut last_drag_rect_size = self.get_card_size();
-        last_drag_rect_size.x -= self.horizontal_drag_size().x;
-        ui.allocate_new_ui(
-            egui::UiBuilder::new()
-                .max_rect(Rect::from_min_size(last_drag_rect_min, last_drag_rect_size)),
-            |ui| {
-                let drag_source = ui.dnd_drag_source(
-                    ui.next_auto_id(),
-                    // TODO Make the payload be a unique identifier
-                    // TODO move the drag payload into a field: RefCell<Option<Payload>> just like the drop payload
-                    DNDSelector::Index(self.cards.len() - 1),
+            if self.draggable {
+                ui.allocate_new_ui(
+                    egui::UiBuilder::new()
+                        .sense(Sense::click_and_drag())
+                        .max_rect(Rect::from_min_size(
+                            origin.add(self.card_pos(idx)),
+                            self.horizontal_drag_size(),
+                        )),
                     |ui| {
-                        ui.set_min_size(last_drag_rect_size);
+                        ui.set_min_size(self.horizontal_drag_size());
+                        if ui.response().drag_started() {
+                            self.set_drag_payload(ui, idx);
+                        }
+                        self.set_drop_payload(ui, idx)
                     },
                 );
-                self.set_drag_payload(ui, self.cards.len() - 1);
-                self.set_drop_payload(&drag_source.response, self.cards.len());
-            },
-        );
+            }
+        }
+        if self.draggable {
+            let last_drag_rect_min = origin.add(self.card_pos(self.cards.len()));
+            let mut last_drag_rect_size = self.get_card_size();
+            last_drag_rect_size.x -= self.horizontal_drag_size().x;
+            ui.allocate_new_ui(
+                egui::UiBuilder::new()
+                    .sense(Sense::click_and_drag())
+                    .max_rect(Rect::from_min_size(last_drag_rect_min, last_drag_rect_size)),
+                |ui| {
+                    ui.set_min_size(last_drag_rect_size);
+                    if ui.response().drag_started() {
+                        self.set_drag_payload(ui, self.cards.len() - 1);
+                    }
+                    self.set_drop_payload(ui, self.cards.len())
+                },
+            );
+            self.set_drop_payload(ui, self.cards.len());
+        }
+        // TODO show card on mouse hover if obstructed
         for (idx, card) in selected {
             let img = self.card_config.img(card);
             egui::Area::new(ui.next_auto_id())
@@ -338,9 +330,7 @@ impl<E: CardEncoding, C: CardConfig> SimpleField<E, C> {
                         });
                 });
         }
-        let response = ui.response();
-        self.set_drop_payload(&response, self.cards.len());
-        response
+        ui.response()
     }
 }
 
